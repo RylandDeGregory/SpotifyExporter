@@ -21,7 +21,7 @@ param ($Timer)
 $TrackFields = 'items(added_at,added_by.id,track(name,id,external_urls(spotify),artists(name,external_urls(spotify)),album(name,external_urls(spotify))))'
 
 # File system location for the resulting .csv file containing playlist data
-$OutputFileLocation = "$HOME/Desktop/PlaylistExport_$(Get-Date -Format 'yyyy-MM-dd').csv"
+$OutputFileLocation = "$env:TEMP/PlaylistExport_$(Get-Date -Format 'yyyy-MM-dd').csv"
 
 $KeyVaultName = 'rylanddegregory'
 $PlaylistType = 'User'
