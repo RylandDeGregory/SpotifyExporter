@@ -16,14 +16,8 @@
 #region Init
 [CmdletBinding()]
 param (
-    # The name of the Azure Key Vault where Spotify API secrets are stored
-    [Parameter(Mandatory)]
-    [string] $KeyVaultName,
-
-    # Process only user-created playlists, only followed playlists, or all playlists
-    [Parameter(Mandatory)]
-    [ValidateSet('User', 'Followed', 'All')]
-    [string] $PlaylistType
+    [Parameter]
+    $Timer
 )
 
 # Properties that will be returned for each track
@@ -32,6 +26,9 @@ $TrackFields = 'items(added_at,added_by.id,track(name,id,external_urls(spotify),
 
 # File system location for the resulting .csv file containing playlist data
 $OutputFileLocation = "$HOME/Desktop/PlaylistExport_$(Get-Date -Format 'yyyy-MM-dd').csv"
+
+$KeyVaultName = 'rylanddegregory'
+$PlaylistType = 'User'
 #endregion Init
 
 #region Functions
