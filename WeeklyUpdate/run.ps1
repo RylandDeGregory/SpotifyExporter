@@ -14,11 +14,7 @@
         https://ryland.dev
 #>
 #region Init
-[CmdletBinding()]
-param (
-    [Parameter]
-    $Timer
-)
+param ($Timer)
 
 # Properties that will be returned for each track
 # https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-playlists-tracks
