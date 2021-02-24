@@ -18,7 +18,7 @@ param ($Timer)
 # https://developer.spotify.com/documentation/web-api/reference/#endpoint-get-playlists-tracks
 $TrackFields = 'items(added_at,added_by.id,track(name,id,external_urls(spotify),artists(name,external_urls(spotify)),album(name,external_urls(spotify))))'
 
-# File system location for the resulting .csv file containing playlist data
+# User-defined variables
 $KeyVaultName = 'rylanddegregory'
 $PlaylistType = 'User'
 #endregion Init
