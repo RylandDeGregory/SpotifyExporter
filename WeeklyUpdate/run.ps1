@@ -4,7 +4,7 @@
     .DESCRIPTION
         Export Spotify playlists to .csv file using the Spotify web API with OAuth2 Client Authorization flow
     .EXAMPLE
-        ./Start-SpotifyPlaylistExport.ps1 -KeyVaultName 'myazkeyvault' -PlaylistType 'User'
+        ./Start-SpotifyPlaylistExport.ps1
     .NOTES
         - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
@@ -21,8 +21,6 @@ param ($Timer)
 $TrackFields = 'items(added_at,added_by.id,track(name,id,external_urls(spotify),artists(name,external_urls(spotify)),album(name,external_urls(spotify))))'
 
 # File system location for the resulting .csv file containing playlist data
-$OutputFileLocation = "$env:TEMP/PlaylistExport_$(Get-Date -Format 'yyyy-MM-dd').csv"
-
 $KeyVaultName = 'rylanddegregory'
 $PlaylistType = 'User'
 #endregion Init
@@ -72,57 +70,6 @@ function Get-SpotifyAccessToken {
        }
     }
 } #endfunction Get-SpotifyAccessToken
-function New-AzStorageReport {
-    <#
-        .SYNOPSIS
-            Copy a report file from a local temp directory to an Azure Storage Account
-    #>
-    [CmdletBinding()]
-    param (
-        # Fully-qualified filesystem path to the file being uploaded to Azure Storage
-        [Parameter(Mandatory)]
-        [string]$ReportDirectory
-    )
-
-    begin {
-        Write-Verbose '[INFO] Entering New-AzStorageReport'
-        $File = Split-Path $ReportDirectory -Leaf
-    }
-
-    process {
-        try {
-            # Storage Account variables
-            $StorageAccountRG   = 'blog'
-            $StorageAccountName = 'rylanddegregory'
-            $Container          = 'spotify'
-
-            # Set Azure Storage Context
-            $ContextParams = @{
-                StorageAccountName = $StorageAccountName
-                StorageAccountKey  = $(Get-AzStorageAccountKey -ResourceGroupName $StorageAccountRG -Name $StorageAccountName)[0].Value
-            }
-            $StorageAccountContext = New-AzStorageContext @ContextParams
-        } catch {
-            throw "[ERROR] Error setting Azure Storage Context to [$StorageAccountName]: $($Error[0])"
-        }
-        try {
-            # Upload file to Azure Blob Storage
-            $Params = @{
-                Context   = $StorageAccountContext
-                Container = $Container
-                File      = $ReportDirectory
-                Blob      = "PlaylistExport/$File"
-            }
-            Set-AzStorageBlobContent @Params -Force
-        } catch {
-            throw "[ERROR] Error Uploading [$File] to Azure Storage: $($Error[0])"
-        }
-    }
-
-    end {
-        Write-Output "[INFO] Uploaded [$File] to Azure Storage"
-    }
-} #endfunction New-AzStorageReport
 
 #endregion Functions
 
@@ -169,7 +116,7 @@ $ProcessPlaylists = switch ($PlaylistType) {
 
 #region ProcessPlaylists
 $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
-    Write-Verbose "[INFO] Processing playlist [$($Playlist.name)]"
+    Write-Host "[INFO] Processing playlist [$($Playlist.name)]"
     # Calculate the number of paginated requests to make to get all tracks in the playlist
     $TrackPages = [math]::ceiling($Playlist.tracks.total / 100)
 
@@ -203,5 +150,7 @@ $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
 
 #region Output
 # Export collection of tracks from all processed playlists to a .csv file at the pre-defined path
-$TrackArray | Export-Csv -Path $OutputFileLocation -NoTypeInformation -Force
+$Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation #-Path $OutputFileLocation -NoTypeInformation -Force
+
+Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
 #endregion Output
