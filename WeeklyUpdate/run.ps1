@@ -1,14 +1,12 @@
 <#
     .SYNOPSIS
-        Export Spotify playlists to .csv file for backup
+        Export Spotify playlists to a .csv file on Azure Blob Storage
     .DESCRIPTION
         Export Spotify playlists to .csv file using the Spotify web API with OAuth2 Client Authorization flow
-    .EXAMPLE
-        ./Start-SpotifyPlaylistExport.ps1
     .NOTES
         - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
-        - Assumes that an Azure Key Vault has been configured to store API secrets
+        - Assumes that an Azure Key Vault has been configured to store Spotify API secrets
           https://docs.microsoft.com/en-us/azure/key-vault/secrets/quick-create-portal
     .LINK
         https://ryland.dev
@@ -70,7 +68,6 @@ function Get-SpotifyAccessToken {
        }
     }
 } #endfunction Get-SpotifyAccessToken
-
 #endregion Functions
 
 #region GetPlaylists
@@ -85,7 +82,7 @@ if ($AccessToken) {
 try {
     # Get the authenticated user's Spotify profile
     $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri 'https://api.spotify.com/v1/me/'
-    Write-Verbose "[INFO] Processing playlists for Spotify user $($User.display_name)"
+    Write-Host "Processing playlists for Spotify user $($User.display_name)"
 } catch {
     throw "[ERROR] Error getting the authenticated user's Spotify profile: $($Error[0])"
 }
@@ -106,7 +103,7 @@ $Playlists = for ($i = 0; $i -lt $PlaylistPages; $i++) {
     }
 }
 
-# Process playlist types based on parameter input
+# Process playlist types based on type
 $ProcessPlaylists = switch ($PlaylistType) {
     'User' { $Playlists.items | Where-Object { $_.owner.id -eq $User.id } }
     'Followed' { $Playlists.items | Where-Object { $_.owner.id -ne $User.id } }
@@ -116,7 +113,7 @@ $ProcessPlaylists = switch ($PlaylistType) {
 
 #region ProcessPlaylists
 $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
-    Write-Host "[INFO] Processing playlist [$($Playlist.name)]"
+    Write-Host "Processing playlist [$($Playlist.name)]"
     # Calculate the number of paginated requests to make to get all tracks in the playlist
     $TrackPages = [math]::ceiling($Playlist.tracks.total / 100)
 
@@ -149,8 +146,9 @@ $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
 #endregion ProcessPlaylists
 
 #region Output
-# Export collection of tracks from all processed playlists to a .csv file at the pre-defined path
-$Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation #-Path $OutputFileLocation -NoTypeInformation -Force
+# Export collection of tracks from all processed playlists to .csv format
+$Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation
 
+# Upload .csv data to Azure Blob Storage
 Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
 #endregion Output
