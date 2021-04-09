@@ -10,6 +10,6 @@ I have modified and re-hosted Spofity's example Node.js application that grants 
 See https://ryland.dev for more information.
 
 
-#### A note on the CosmosDB functions
+## A note on the CosmosDB functions
 
 The PowerShell Azure Functions `WeeklyCosmosLibraryUpdate` and `WeeklyCosmosPlaylistUpdate` are configured to export Spotify user data to a CosmosDB database utilizing the SQL (core) API. I have validated the efficacy of these functions in achieving their intended purpose, but I do not have them implemented due to the cost of Cosmos DB. Feel freel to use them as you wish, and if you run into any issues, please open an issue or PR.
