@@ -15,7 +15,7 @@
 param ($Timer)
 
 # Azure Key Vault name
-$KeyVaultName = 'rylanddegregory'
+$KeyVaultName = $env:KEY_VAULT_NAME
 #endregion Init
 
 #region Functions

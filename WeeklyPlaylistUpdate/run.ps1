@@ -19,7 +19,7 @@ param ($Timer)
 $TrackFields = 'items(added_at,added_by.id,track(name,id,external_urls(spotify),artists(name,external_urls(spotify)),album(name,external_urls(spotify))))'
 
 # User-defined variables
-$KeyVaultName = 'rylanddegregory'
+$KeyVaultName = $env:KEY_VAULT_NAME
 $PlaylistType = 'User'
 #endregion Init
 
