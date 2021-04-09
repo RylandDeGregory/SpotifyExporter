@@ -13,7 +13,7 @@
       "databaseName": "Spotify",
       "collectionName": "Playlists",
       "createIfNotExists": "false",
-      "connectionStringSetting": "rylandspotify_DOCUMENTDB",
+      "connectionStringSetting": "spotify_DOCUMENTDB",
       "partitionKey": "/PlaylistName"
     }
   ]
