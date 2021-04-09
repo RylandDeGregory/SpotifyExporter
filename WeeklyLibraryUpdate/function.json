@@ -10,7 +10,7 @@
       "name": "OutputBlob",
       "type": "blob",
       "path": "spotify/LibraryExport/cale1008_{DateTime}.csv",
-      "connection": "SpotifyStorage",
+      "connection": "AzureWebJobsStorage",
       "direction": "out"
     }
   ]
