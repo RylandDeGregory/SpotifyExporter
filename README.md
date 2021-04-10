@@ -7,7 +7,7 @@ Users must obtain an OAuth 2 Refresh token using the [Authorization Code Flow](h
 
 I have modified and re-hosted Spofity's example Node.js application that grants an OAuth 2 Refresh token. Follow the instructions in my [SpotifyWebAPIAuth](https://github.com/RylandDeGregory/SpotifyWebAPIAuth) repo's `README.md` to both create an Application and obtain an OAuth 2 Refresh token that can access the Spotify API for your user account.
 
-See [ryland.dev](https://ryland.dev) for more information.
+See [ryland.dev](https://ryland.dev/posts/spotify-exporter) for more information.
 
 
 ## A note on the CosmosDB functions
