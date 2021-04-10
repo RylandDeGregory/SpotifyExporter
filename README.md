@@ -8,9 +8,11 @@ Users must obtain a Client ID and Client Secret by registering a [Spotify App](h
 
 I have modified and re-hosted Spotify's example Node.js application that grants an OAuth 2 refresh token. Follow the instructions in my [SpotifyWebAPIAuth](https://github.com/RylandDeGregory/SpotifyWebAPIAuth) GitHub repo to both register a Spotify app and obtain an OAuth 2 refresh token that can access your user profile using the Spotify Web API.
 
-See [ryland.dev](https://ryland.dev/posts/spotify-exporter) for more information.
+## Implementation
 
-If you run into any issues, please open an issue or pull request.
+This repo can be deployed directly to Azure as a PowerShell Function App. See [ryland.dev](https://ryland.dev/posts/spotify-exporter) for more information and a step-by-step guide.
+
+If you run into any issues with this repo, or the process outlined in the blog post, please open an issue or pull request.
 
 ### A note on the CosmosDB functions
 
