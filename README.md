@@ -16,4 +16,4 @@ If you run into any issues with this repo, or the process outlined in the blog p
 
 ### A note on the CosmosDB functions
 
-The PowerShell Azure Functions `WeeklyCosmosLibraryUpdate` and `WeeklyCosmosPlaylistUpdate` are configured to export Spotify user data to an [Azure CosmosDB](https://azure.microsoft.com/en-us/services/cosmos-db/) database utilizing the SQL (core) API. I have validated the efficacy of these functions in achieving their intended purpose, but I do not have them implemented in my Azure Subscription due to the cost of CosmosDB. Feel free to use them if you wish.
+The PowerShell Azure Functions `WeeklyCosmosLibraryUpdate` and `WeeklyCosmosPlaylistUpdate` are configured to export Spotify user data to an [Azure CosmosDB](https://azure.microsoft.com/en-us/services/cosmos-db/) database utilizing the SQL (core) API. I have validated the efficacy of these functions in achieving their intended purpose, but I do not have them implemented in my Azure Subscription due to the cost of CosmosDB. Feel free to use them if you wish. If you don't, you can disable them from within the **Functions** blade of your Azure Function App.
