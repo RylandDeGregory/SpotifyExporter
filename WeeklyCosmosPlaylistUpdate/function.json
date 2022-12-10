@@ -9,7 +9,7 @@
     {
       "type": "cosmosDB",
       "direction": "out",
-      "name": "outputDocument",
+      "name": "OutputDocument",
       "databaseName": "Spotify",
       "collectionName": "Playlists",
       "createIfNotExists": "false",
