@@ -5,25 +5,25 @@ param location string = resourceGroup().location
 param logsEnabled bool = false
 
 @description('A unique string to add as a suffix to all resources. Default: uniqueString(resourceGroup().id)')
-param uniqueSuffix string = uniqueString(resourceGroup().id)
+param uniqueSuffix string = substring(uniqueString(resourceGroup().id), 0, 5)
 
-@description('Log Analytics Workspace name. Default: log-spotify-$<location>-$<uniqueSuffix>')
-param logAnalyticsWorkspaceName string = 'log-spotify-${location}-${uniqueSuffix}'
+@description('Log Analytics Workspace name. Default: log-spotifyexport-$<uniqueSuffix>')
+param logAnalyticsWorkspaceName string = 'log-spotifyexport-${uniqueSuffix}'
 
-@description('Application Insights name. Default: appi-spotify-$<location>-$<uniqueSuffix>')
-param appInsightsName string = 'appi-spotify-${location}-${uniqueSuffix}'
+@description('Application Insights name. Default: appi-spotifyexport-$<uniqueSuffix>')
+param appInsightsName string = 'appi-spotifyexport-${uniqueSuffix}'
 
-@description('Storage Account name. Default: stspotify$<location>$<uniqueSuffix>')
-param storageAccountName string = 'stspotify${location}${uniqueSuffix}'
+@description('Storage Account name. Default: stspotifyexport$<uniqueSuffix>')
+param storageAccountName string = 'stspotifyexport${uniqueSuffix}'
 
-@description('App Service Plan name. Default: asp-spotify-$<location>-$<uniqueSuffix>')
-param appServicePlanName string = 'asp-spotify-${location}-${uniqueSuffix}'
+@description('App Service Plan name. Default: asp-spotifyexport-$<uniqueSuffix>')
+param appServicePlanName string = 'asp-spotifyexport-${uniqueSuffix}'
 
-@description('Function App name. Default: func-spotify-$<location>-$<uniqueSuffix>')
-param functionAppName string = 'func-spotify-${location}-${uniqueSuffix}'
+@description('Function App name. Default: func-spotifyexport-$<uniqueSuffix>')
+param functionAppName string = 'func-spotifyexport-${uniqueSuffix}'
 
-@description('Key Vault name. Default: kv-spotify-$<location>-$<uniqueSuffix>')
-param keyVaultName string = 'kv-spotify-${location}-${uniqueSuffix}'
+@description('Key Vault name. Default: kv-spotifyexport-$<uniqueSuffix>')
+param keyVaultName string = 'kv-spotifyexport-${uniqueSuffix}'
 
 @description('Value of the Spotify-ClientID Key Vault secret')
 @secure()
@@ -48,6 +48,16 @@ var defaultLogOrMetric = {
   retentionPolicy: {
     days: logsEnabled ? 7 : 0
     enabled: logsEnabled
+  }
+}
+
+// Resource Group Lock
+resource rgLock 'Microsoft.Authorization/locks@2016-09-01' = {
+  scope: resourceGroup()
+  name: 'DoNotDelete'
+  properties: {
+    level: 'CanNotDelete'
+    notes: 'This lock prevents the accidental deletion of resources'
   }
 }
 
@@ -98,6 +108,16 @@ resource log 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
+resource logAnalyticsWorkspaceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'All Logs and Metrics'
+  scope: log
+  properties: {
+    logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
+    metrics: [ union({ categoryGroup: 'allMetrics' }, defaultLogOrMetric) ]
+    workspaceId: log.id
+  }
+}
+
 // Application Insights
 resource appi 'Microsoft.Insights/components@2020-02-02' = {
   name: appInsightsName
@@ -110,7 +130,7 @@ resource appi 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // Storage Account
-resource st 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+resource st 'Microsoft.Storage/storageAccounts@2022-05-01' = {
   name: storageAccountName
   location: location
   kind: 'StorageV2'
@@ -124,7 +144,7 @@ resource st 'Microsoft.Storage/storageAccounts@2022-09-01' = {
 
 }
 
-resource stBlob 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01' existing = {
+resource stBlob 'Microsoft.Storage/storageAccounts/blobServices@2022-05-01' existing = {
   name: 'default'
   parent: st
 }
@@ -154,7 +174,7 @@ resource asp 'Microsoft.Web/serverfarms@2022-03-01' = {
   location: location
   kind: 'linux'
   properties: {
-    reserved: false
+    reserved: true
   }
   sku: {
     name: 'Y1'
@@ -181,6 +201,7 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
   }
   properties: {
     httpsOnly: true
+    reserved: true
     serverFarmId: asp.id
     keyVaultReferenceIdentity: 'SystemAssigned'
     siteConfig: {
@@ -226,7 +247,6 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
       alwaysOn: false
     }
   }
-
 }
 
 resource funcDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
@@ -253,7 +273,7 @@ resource kv 'Microsoft.KeyVault/vaults@2022-07-01' = {
     enabledForDeployment: false
     enabledForDiskEncryption: false
     enabledForTemplateDeployment: false
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
     softDeleteRetentionInDays: 30
     tenantId: tenant().tenantId
   }
