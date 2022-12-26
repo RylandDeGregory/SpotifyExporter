@@ -4,7 +4,7 @@ param location string = resourceGroup().location
 @description('Switch to enable/disable DiagnosticSettings for the resources. Default: false')
 param logsEnabled bool = false
 
-@description('A unique string to add as a suffix to all resources. Default: uniqueString(resourceGroup().id)')
+@description('A unique string to add as a suffix to all resources. Default: substring(uniqueString(resourceGroup().id), 0, 5)')
 param uniqueSuffix string = substring(uniqueString(resourceGroup().id), 0, 5)
 
 @description('Log Analytics Workspace name. Default: log-spotifyexport-$<uniqueSuffix>')
@@ -37,10 +37,6 @@ param spotifyClientSecret string
 @secure()
 param spotifyRefreshToken string
 
-// Link Application Insights instance to Function App
-var appiLink = {
-  'hidden-link:/subscriptions/${subscription().id}/resourceGroups/${resourceGroup().name}/providers/Microsoft.Web/sites/${functionAppName}': 'Resource'
-}
 
 // Default logging policy for all resources
 var defaultLogOrMetric = {
@@ -126,7 +122,10 @@ resource appi 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
   }
-  tags: appiLink
+  // Link Application Insights instance to Function App
+  tags: {
+    'hidden-link:${resourceId('Microsoft.Web/sites', functionAppName)}': 'Resource'
+  }
 }
 
 // Storage Account
@@ -217,7 +216,15 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(st.id, st.apiVersion).keys[0].value}'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
+        }
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: toLower(functionAppName)
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
@@ -226,6 +233,10 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'powershell'
+        }
+        {
+          name: 'WEBSITE_RUN_FROM_PACKAGE'
+          value: 'https://rylanddegregory.blob.core.windows.net/spotifytest/SpotifyExp.zip'
         }
         {
           name: 'PLAYLIST_TYPE'
