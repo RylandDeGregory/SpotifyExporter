@@ -16,3 +16,29 @@ if ($env:MSI_SECRET) {
 }
 
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
+function Get-SpotifyAccessToken {
+    [CmdletBinding()]
+    param ()
+
+    # Set Application credentials from Application Settings
+    $ApplicationCredentials = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($env:SPOTIFY_CLIENT_ID)`:$($env:SPOTIFY_CLIENT_SECRET)"))
+
+    # Set Request elements
+    $TokenHeader = @{ 'Authorization' = "Basic $ApplicationCredentials" }
+    $TokenBody   = @{ grant_type = 'refresh_token'; refresh_token = "$($env:SPOTIFY_REFRESH_TOKEN)" }
+
+    try {
+        # Get an Access token from the Refresh token
+        $AccessToken = Invoke-RestMethod -Method Post -Headers $TokenHeader -Uri 'https://accounts.spotify.com/api/token' -Body $TokenBody | Select-Object -ExpandProperty access_token
+    } catch {
+        Write-Error "Error getting Access Token from Spotify API '/token' endpoint using Refresh Token: $_"
+    }
+
+    # Get OAuth2 Access token and set API headers
+    if ($AccessToken) {
+        $ApiHeaders = @{ 'Authorization' = "Bearer $AccessToken" }
+    } else {
+        Write-Error 'No OAuth2 Access token was granted. Please ensure that the application ClientID and ClientSecret, and the user OAuth2 Refresh token are valid.'
+    }
+    return $ApiHeaders
+}
