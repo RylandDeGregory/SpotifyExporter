@@ -236,7 +236,7 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: 'https://rylanddegregory.blob.core.windows.net/spotifytest/SpotifyExp.zip'
+          value: 'https://raw.githubusercontent.com/RylandDeGregory/SpotifyExporter/master/src.zip'
         }
         {
           name: 'PLAYLIST_TYPE'
