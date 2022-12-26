@@ -236,7 +236,7 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'WEBSITE_RUN_FROM_PACKAGE'
-          value: 'https://raw.githubusercontent.com/RylandDeGregory/SpotifyExporter/master/src.zip'
+          value: 'https://github.com/RylandDeGregory/SpotifyExporter/blob/master/src.zip?raw=true'
         }
         {
           name: 'PLAYLIST_TYPE'
