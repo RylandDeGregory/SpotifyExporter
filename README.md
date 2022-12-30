@@ -25,7 +25,7 @@ Once you have created your app, use the `Client ID`, `Client Secret`, and `Redir
 3. Install or open PowerShell.
     * If you have a Windows computer, launch it by pressing <kbd>Win</kbd> + <kbd>R</kbd> and typing **powershell**.
     * If you have a MacOS computer, install [PowerShell](https://github.com/PowerShell/PowerShell#get-powershell). Launch PowerShell by pressing <kbd>Cmd</kbd> + <kbd>Space</kbd> and typing **PowerShell**.
-4. Navigate to the directory where you extracted `SpotifyExporter.zip` using the `cd` command.
+4. Navigate to the folder where you extracted `SpotifyExporter.zip` using the `cd` command.
     * *Example:* `cd ./Downloads/SpotifyExporter`.
 5. Execute the `Get-SpotifyRefreshToken.ps1` script using the values obtained from your Spotify Developer Application.
     * *Example:*
