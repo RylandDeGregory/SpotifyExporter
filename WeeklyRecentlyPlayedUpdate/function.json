@@ -1,0 +1,17 @@
+{
+  "bindings": [
+    {
+      "name": "Timer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 0 0 * * Sun"
+    },
+    {
+      "name": "OutputBlob",
+      "type": "blob",
+      "path": "spotify/PlaybackExport/{DateTime}.csv",
+      "connection": "AzureWebJobsStorage",
+      "direction": "out"
+    }
+  ]
+}

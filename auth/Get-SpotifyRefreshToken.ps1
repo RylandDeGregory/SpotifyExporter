@@ -35,13 +35,14 @@ $ErrorActionPreference = 'Stop'
 $EncodedRedirectUri = [System.Web.HTTPUtility]::UrlEncode($RedirectUri.AbsoluteUri)
 # Request only read scopes
 $ApiScopes = @(
-    'playlist-read-private',
     'playlist-read-collaborative',
-    'user-top-read',
+    'playlist-read-private',
     'user-follow-read',
     'user-library-read',
+    'user-read-email',
     'user-read-private',
-    'user-read-email'
+    'user-read-recently-played',
+    'user-top-read'
 ) -join '%20'
 $AuthState   = (New-Guid).ToString()
 $AuthCodeUri = "https://accounts.spotify.com/authorize?client_id=$ClientId&response_type=code&redirect_uri=$EncodedRedirectUri&state=$AuthState&scope=$ApiScopes"

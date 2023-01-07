@@ -1,8 +1,8 @@
 <#
     .SYNOPSIS
-        Export Spotify user library to a .csv file on Azure Blob Storage
+        Export Spotify user playback history to a .csv file on Azure Blob Storage
     .DESCRIPTION
-        Export Spotify user library to .csv file using the Spotify web API with OAuth2 Client Authorization flow
+        Export Spotify user playback history to .csv file using the Spotify web API with OAuth2 Client Authorization flow
     .NOTES
         - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
@@ -18,40 +18,30 @@ $SpotifyApiUrl = 'https://api.spotify.com/v1'
 $Headers = Get-SpotifyAccessToken
 #endregion Init
 
-#region GetLibrary
+#region GetPlaybackHistory
 try {
     $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/"
     $UserDisplayName = $User.display_name
-    Write-Information "Process Library for Spotify user [$UserDisplayName]"
+    Write-Information "Process playback history for Spotify user [$UserDisplayName]"
 } catch {
     Write-Error "Error getting the authenticated user's Spotify profile: $_"
 }
 
 try {
-    # Determine the user's number of saved tracks and calculate the number of paginated requests to make
-    $Library = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/tracks"
-    $LibraryPages = [math]::ceiling($Library.total / 50)
-    Write-Information "Library contains [$($Library.total)] tracks"
+    # Get the user's 50 most recently played tracks (50 is an API limitation, which requires higher polling to ensure nothing is missed)
+    Write-Information 'Process 50 most recently played tracks'
+    $RecentlyPlayed = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/player/recently-played?limit=50"
 } catch {
-    Write-Error "Error getting the number of saved tracks for user [$UserDisplayName]: $_"
+    Write-Error "Error getting recently played tracks for user [$UserDisplayName]: $_"
 }
 
-# Build collection of saved tracks by processing all pages
-$UserLibrary = for ($i = 0; $i -lt $LibraryPages; $i++) {
-    try {
-        Write-Verbose "Processing Library page [$i/$LibraryPages]" -Verbose
-        Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/tracks?limit=50&offset=$($i * 50)"
-    } catch {
-        Write-Error "Error getting list of saved tracks for user [$UserDisplayName]: $_"
-    }
-}
 #endregion GetLibrary
 
 #region ProcessLibrary
-Write-Information "Create collection of output objects for [$($UserLibrary.items.Count)] tracks in user Library"
-$TrackArray = foreach ($Track in $UserLibrary.items) {
+Write-Information "Create collection of output objects for [$($RecentlyPlayed.items.Count)] tracks in user playback history"
+$TrackArray = foreach ($Track in $RecentlyPlayed.items) {
     [PSCustomObject]@{
-        AddedAt   = $Track.added_at
+        PlayedAt  = $Track.played_at
         Name      = $Track.track.name
         TrackURL  = $Track.track.external_urls.spotify
         Artist    = $Track.track.artists.name | Join-String -Separator ', '
