@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.13.1.58284",
-      "templateHash": "3329696671415452679"
+      "templateHash": "2426508159148709249"
     }
   },
   "parameters": {
@@ -21,6 +21,20 @@
       "defaultValue": false,
       "metadata": {
         "description": "Switch to enable/disable DiagnosticSettings for the resources. Default: false"
+      }
+    },
+    "cosmosEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Switch to enable/disable provisioning and exporting to a Cosmos DB NoSQL Account. Default: false"
+      }
+    },
+    "storageExportEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Switch to enable/disable exporting CSVs to Azure Blob Storage. Default: true"
       }
     },
     "uniqueSuffix": {
@@ -65,6 +79,13 @@
         "description": "Function App name. Default: func-spotifyexport-$<uniqueSuffix>"
       }
     },
+    "cosmosAccountName": {
+      "type": "string",
+      "defaultValue": "[format('cosno-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "metadata": {
+        "description": "Cosmos DB Account name. Default: cosno-spotifyexport-$<uniqueSuffix>"
+      }
+    },
     "keyVaultName": {
       "type": "string",
       "defaultValue": "[format('kv-spotifyexport-{0}', parameters('uniqueSuffix'))]",
@@ -98,7 +119,13 @@
         "days": "[if(parameters('logsEnabled'), 7, 0)]",
         "enabled": "[parameters('logsEnabled')]"
       }
-    }
+    },
+    "cosmosContainerNames": [
+      "Following",
+      "Library",
+      "Playlist",
+      "RecentlyPlayed"
+    ]
   },
   "resources": [
     {
@@ -301,6 +328,18 @@
               "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-05-01').keys[0].value)]"
             },
             {
+              "name": "COSMOS_CONNECTION_STRING",
+              "value": "[if(parameters('cosmosEnabled'), listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName'))), '2022-05-15').connectionStrings[0].connectionString, 'null')]"
+            },
+            {
+              "name": "COSMOS_ENABLED",
+              "value": "[format('{0}', parameters('cosmosEnabled'))]"
+            },
+            {
+              "name": "STORAGE_ENABLED",
+              "value": "[format('{0}', parameters('storageExportEnabled'))]"
+            },
+            {
               "name": "WEBSITE_CONTENTSHARE",
               "value": "[toLower(parameters('functionAppName'))]"
             },
@@ -339,6 +378,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]",
         "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]",
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
@@ -359,6 +399,99 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2022-05-15",
+      "name": "[toLower(parameters('cosmosAccountName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "enableFreeTier": true,
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]"
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2022-05-15",
+      "name": "[format('{0}/{1}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]",
+      "properties": {
+        "resource": {
+          "id": "cosmos-spotifyexport"
+        },
+        "options": {
+          "throughput": 1000
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]"
+      ]
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "copy": {
+        "name": "cosmosContainers",
+        "count": "[length(variables('cosmosContainerNames'))]"
+      },
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2022-05-15",
+      "name": "[format('{0}/{1}/{2}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport', variables('cosmosContainerNames')[copyIndex()])]",
+      "properties": {
+        "resource": {
+          "id": "[variables('cosmosContainerNames')[copyIndex()]]",
+          "partitionKey": {
+            "paths": [
+              "/id"
+            ],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "automatic": true,
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/_etag/?"
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', toLower(parameters('cosmosAccountName')))]",
+      "name": "All Logs and Metrics",
+      "properties": {
+        "logs": [
+          "[union(createObject('categoryGroup', 'allLogs'), variables('defaultLogOrMetric'))]"
+        ],
+        "metrics": [
+          "[union(createObject('category', 'AllMetrics'), variables('defaultLogOrMetric'))]"
+        ],
+        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       ]
     },

@@ -1,0 +1,27 @@
+{
+  "bindings": [
+    {
+      "name": "Timer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 0 0 * * Sun"
+    },
+    {
+      "name": "OutputBlob",
+      "type": "blob",
+      "path": "spotify/Following/{DateTime}.csv",
+      "connection": "AzureWebJobsStorage",
+      "direction": "out"
+    },
+    {
+      "type": "cosmosDB",
+      "direction": "out",
+      "name": "outputDocument",
+      "databaseName": "cosmos-spotifyexport",
+      "collectionName": "Following",
+      "createIfNotExists": false,
+      "connectionStringSetting": "COSMOS_CONNECTION_STRING",
+      "partitionKey": "id"
+    }
+  ]
+}

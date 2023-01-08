@@ -4,6 +4,12 @@ param location string = resourceGroup().location
 @description('Switch to enable/disable DiagnosticSettings for the resources. Default: false')
 param logsEnabled bool = false
 
+@description('Switch to enable/disable provisioning and exporting to a Cosmos DB NoSQL Account. Default: false')
+param cosmosEnabled bool = false
+
+@description('Switch to enable/disable exporting CSVs to Azure Blob Storage. Default: true')
+param storageExportEnabled bool = true
+
 @description('A unique string to add as a suffix to all resources. Default: substring(uniqueString(resourceGroup().id), 0, 5)')
 param uniqueSuffix string = substring(uniqueString(resourceGroup().id), 0, 5)
 
@@ -21,6 +27,9 @@ param appServicePlanName string = 'asp-spotifyexport-${uniqueSuffix}'
 
 @description('Function App name. Default: func-spotifyexport-$<uniqueSuffix>')
 param functionAppName string = 'func-spotifyexport-${uniqueSuffix}'
+
+@description('Cosmos DB Account name. Default: cosno-spotifyexport-$<uniqueSuffix>')
+param cosmosAccountName string = 'cosno-spotifyexport-${uniqueSuffix}'
 
 @description('Key Vault name. Default: kv-spotifyexport-$<uniqueSuffix>')
 param keyVaultName string = 'kv-spotifyexport-${uniqueSuffix}'
@@ -46,6 +55,14 @@ var defaultLogOrMetric = {
     enabled: logsEnabled
   }
 }
+
+// Default Cosmos DB containers
+var cosmosContainerNames = [
+  'Following'
+  'Library'
+  'Playlist'
+  'RecentlyPlayed'
+]
 
 // Resource Group Lock
 resource rgLock 'Microsoft.Authorization/locks@2016-09-01' = {
@@ -223,6 +240,18 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
           value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
         }
         {
+          name: 'COSMOS_CONNECTION_STRING'
+          value: cosmosEnabled ? cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString : 'null'
+        }
+        {
+          name: 'COSMOS_ENABLED'
+          value: '${cosmosEnabled}'
+        }
+        {
+          name: 'STORAGE_ENABLED'
+          value: '${storageExportEnabled}'
+        }
+        {
           name: 'WEBSITE_CONTENTSHARE'
           value: toLower(functionAppName)
         }
@@ -263,6 +292,77 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
 resource funcDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'All Logs and Metrics'
   scope: func
+  properties: {
+    logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
+    metrics: [ union({ category: 'AllMetrics' }, defaultLogOrMetric) ]
+    workspaceId: log.id
+  }
+}
+
+// Cosmos DB (NoSQL API)
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2022-05-15' = if (cosmosEnabled) {
+  name: toLower(cosmosAccountName)
+  location: location
+  properties: {
+    enableFreeTier: true
+    databaseAccountOfferType: 'Standard'
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Session'
+    }
+    locations: [
+      {
+        locationName: location
+      }
+    ]
+  }
+}
+
+resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-05-15' = if (cosmosEnabled) {
+  parent: cosmosAccount
+  name: 'cosmos-spotifyexport'
+  properties: {
+    resource: {
+      id: 'cosmos-spotifyexport'
+    }
+    options: {
+      throughput: 1000
+    }
+  }
+}
+
+resource cosmosContainers 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-05-15' = [for containerName in cosmosContainerNames: if(cosmosEnabled) {
+  parent: cosmosDatabase
+  name: containerName
+  properties: {
+    resource: {
+      id: containerName
+      partitionKey: {
+        paths: [
+          '/id'
+        ]
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/_etag/?'
+          }
+        ]
+      }
+    }
+  }
+}]
+
+resource cosmosDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'All Logs and Metrics'
+  scope: cosmosAccount
   properties: {
     logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
     metrics: [ union({ category: 'AllMetrics' }, defaultLogOrMetric) ]

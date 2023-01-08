@@ -1,10 +1,10 @@
 <#
     .SYNOPSIS
-        Export Spotify user playback history to a .csv file on Azure Blob Storage
+        Export Spotify user playback history
     .DESCRIPTION
-        Export Spotify user playback history to .csv file using the Spotify web API with OAuth2 Client Authorization flow
+        Export Spotify user playback history to one or both .csv file on Azure Blob Storage and CosmosDB NoSQL collection using the Spotify web API with OAuth2 Client Authorization flow
     .NOTES
-        - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user
+        - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user containing the 'user-read-recently-played' scope
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
     .LINK
         https://ryland.dev
@@ -34,12 +34,13 @@ try {
 } catch {
     Write-Error "Error getting recently played tracks for user [$UserDisplayName]: $_"
 }
+#endregion GetPlaybackHistory
 
-#endregion GetLibrary
-
-#region ProcessLibrary
-Write-Information "Create collection of output objects for [$($RecentlyPlayed.items.Count)] tracks in user playback history"
+#region ProcessPlaybackHistory
+Write-Information 'Create collection of output objects for user playback history'
 $TrackArray = foreach ($Track in $RecentlyPlayed.items) {
+    # Compute hash of play time and track id to ensure record uniqueness
+    $TrackHash = Get-FileHash -Algorithm MD5 -InputStream ([System.IO.MemoryStream]::New([System.Text.Encoding]::ASCII.GetBytes("$($Track.played_at)_$($Track.track.id)"))) | Select-Object -ExpandProperty Hash
     [PSCustomObject]@{
         PlayedAt  = $Track.played_at
         Name      = $Track.track.name
@@ -48,14 +49,23 @@ $TrackArray = foreach ($Track in $RecentlyPlayed.items) {
         ArtistURL = $Track.track.artists.external_urls.spotify | Join-String -Separator ', '
         Album     = $Track.track.album.name
         AlbumURL  = $Track.track.album.external_urls.spotify
+        Context   = $Track.context.external_urls.spotify
+        id        = $TrackHash
     }
 }
-#endregion ProcessLibrary
+#endregion ProcessPlaybackHistory
 
 #region Output
-Write-Information 'Convert output collection of objects to CSV'
-$Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation
+if ($env:COSMOS_ENABLED -eq 'True') {
+    Write-Information 'Export collection of objects to CosmosDB'
+    Push-OutputBinding -Name OutputDocument -Value $TrackArray
+}
 
-Write-Information 'Upload CSV to Azure Storage'
-Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
+if ($env:STORAGE_ENABLED -eq 'True') {
+    Write-Information 'Convert output collection of objects to CSV'
+    $Csv = $TrackArray | Select-Object -ExcludeProperty id | ConvertTo-Csv -NoTypeInformation
+
+    Write-Information 'Upload CSV to Azure Storage'
+    Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
+}
 #endregion Output
