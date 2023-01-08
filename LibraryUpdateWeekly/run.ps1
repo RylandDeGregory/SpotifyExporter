@@ -71,7 +71,7 @@ if ($env:COSMOS_ENABLED -eq 'True') {
 
 if ($env:STORAGE_ENABLED -eq 'True') {
     Write-Information 'Convert output collection of objects to CSV'
-    $Csv = $TrackArray | Select-Object -ExcludeProperty id | ConvertTo-Csv -NoTypeInformation
+    $Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation
 
     Write-Information 'Upload CSV to Azure Storage'
     Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
