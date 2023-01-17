@@ -62,21 +62,21 @@ Write-Information "Processing [$($ProcessPlaylists.Count)] [$($env:PLAYLIST_TYPE
 
 #region ProcessPlaylists
 $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
-    Write-Information "Processing playlist [$($Playlist.name)] with [$($Playlist.tracks.total)] tracks"
+    $PlaylistCount = 1
+    Write-Information "Processing playlist [$($Playlist.name)] with [$($Playlist.tracks.total)] tracks [$PlaylistCount/$($ProcessPlaylists.Count)]"
     # Calculate the number of paginated requests to make to get all tracks in the playlist
     $TrackPages = [math]::ceiling($Playlist.tracks.total / 100)
 
     # Build collection of tracks by processing all pages
     for ($i = 0; $i -lt $TrackPages; $i++) {
         try {
-            Write-Verbose "Processing track page [$i/$TrackPages] in playlist [$($Playlist.name)]" -Verbose
+            Write-Verbose "Processing track page [$($i+1)/$TrackPages] in playlist [$($Playlist.name)]" -Verbose
             # Get all tracks in the playlist page, the API returns only the pre-defined fields
             $Tracks = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/playlists/$($Playlist.id)/tracks?limit=100&offset=$($i * 100)&fields=$TrackFields"
         } catch {
             Write-Error "Error getting tracks from playlist [$($Playlist.name)]: $_"
         }
 
-        Write-Information "Create collection of output objects for [$($Playlist.tracks.total)] tracks in playlist [$($Playlist.name)]"
         foreach ($Track in $Tracks.items) {
             [PSCustomObject]@{
                 PlaylistName  = $Playlist.name -replace '[^a-zA-Z0-9 -]', ''
@@ -94,6 +94,7 @@ $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
             }
         }
     }
+    $PlaylistCount++
 }
 #endregion ProcessPlaylists
 
