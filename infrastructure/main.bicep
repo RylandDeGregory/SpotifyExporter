@@ -40,23 +40,25 @@ param spotifyRefreshToken string
 @description('Beatport Application Client ID. Recommended to leave as default. Default: Beatport API Docs Client Id')
 param beatportClientId string = '0GIvkCltVIuPkkwSJHp6NDb3s0potTjLBQr388Dd'
 
-@description('Value of the Beatport-AccessToken Key Vault secret')
+@description('Value of the Beatport-AccessToken Key Vault secret. Default: empty string')
 @secure()
 param beatportAccessToken string = ''
 
-@description('Value of the Beatport-RefreshToken Key Vault secret')
+@description('Value of the Beatport-RefreshToken Key Vault secret. Default: empty string')
 @secure()
 param beatportRefreshToken string = ''
 
-@description('Playlist name to sync between Spotify and Beatport')
-param syncedPlaylistName string
+@description('Playlist name to sync between Spotify and Beatport. Default: empty string')
+param syncedPlaylistName string = ''
 
+// If the Beatport sync Function should be disabled
+var beatportFunctionDisabled = syncedPlaylistName == '' ? '1' : '0'
 
 // Default logging policy for all resources
 var defaultLogOrMetric = {
   enabled: logsEnabled
   retentionPolicy: {
-    days: logsEnabled ? 7 : 0
+    days: logsEnabled ? 30 : 0
     enabled: logsEnabled
   }
 }
@@ -231,6 +233,10 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'AzureWebJobsStorage'
           value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
+        }
+        {
+          name: 'AzureWebJobs.HourlyPlaylistBeatportSync.Disabled'
+          value: beatportFunctionDisabled
         }
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'

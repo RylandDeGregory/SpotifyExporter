@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.14.6.61914",
-      "templateHash": "9905335159179125663"
+      "templateHash": "8644554452589956018"
     }
   },
   "parameters": {
@@ -101,28 +101,30 @@
       "type": "securestring",
       "defaultValue": "",
       "metadata": {
-        "description": "Value of the Beatport-AccessToken Key Vault secret"
+        "description": "Value of the Beatport-AccessToken Key Vault secret. Default: empty string"
       }
     },
     "beatportRefreshToken": {
       "type": "securestring",
       "defaultValue": "",
       "metadata": {
-        "description": "Value of the Beatport-RefreshToken Key Vault secret"
+        "description": "Value of the Beatport-RefreshToken Key Vault secret. Default: empty string"
       }
     },
     "syncedPlaylistName": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "Playlist name to sync between Spotify and Beatport"
+        "description": "Playlist name to sync between Spotify and Beatport. Default: empty string"
       }
     }
   },
   "variables": {
+    "beatportFunctionDisabled": "[if(equals(parameters('syncedPlaylistName'), ''), '1', '0')]",
     "defaultLogOrMetric": {
       "enabled": "[parameters('logsEnabled')]",
       "retentionPolicy": {
-        "days": "[if(parameters('logsEnabled'), 7, 0)]",
+        "days": "[if(parameters('logsEnabled'), 30, 0)]",
         "enabled": "[parameters('logsEnabled')]"
       }
     }
@@ -322,6 +324,10 @@
             {
               "name": "AzureWebJobsStorage",
               "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-05-01').keys[0].value)]"
+            },
+            {
+              "name": "AzureWebJobs.HourlyPlaylistBeatportSync.Disabled",
+              "value": "[variables('beatportFunctionDisabled')]"
             },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
