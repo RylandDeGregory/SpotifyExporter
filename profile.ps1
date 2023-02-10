@@ -9,6 +9,11 @@
 # You can define helper functions, run commands, or specify environment variables
 # NOTE: any variables defined that are not environment variables will get reset after the first execution
 
+if ($env:MSI_SECRET) {
+    Disable-AzContextAutosave -Scope Process | Out-Null
+    Connect-AzAccount -Identity | Out-Null
+}
+
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
 function Get-SpotifyAccessToken {
     [CmdletBinding()]
@@ -66,8 +71,8 @@ function Get-BeatportAccessToken {
     if ($NewAccessToken) {
         $ApiHeaders = @{ 'Authorization' = "Bearer $NewAccessToken" }
         try {
-            Set-AzKeyVaultSecret -VaultName $env:KEY_VAULT_NAME -SecretName 'Beatport-AccessToken' -SecretValue $(ConvertTo-SecureString -String $NewAccessToken -AsPlainText -Force)
-            Set-AzKeyVaultSecret -VaultName $env:KEY_VAULT_NAME -SecretName 'Beatport-RefreshToken' -SecretValue $(ConvertTo-SecureString -String $NewRefreshToken -AsPlainText -Force)
+            Set-AzKeyVaultSecret -VaultName $env:KEY_VAULT_NAME -SecretName 'Beatport-AccessToken' -SecretValue $(ConvertTo-SecureString -String $NewAccessToken -AsPlainText -Force) | Out-Null
+            Set-AzKeyVaultSecret -VaultName $env:KEY_VAULT_NAME -SecretName 'Beatport-RefreshToken' -SecretValue $(ConvertTo-SecureString -String $NewRefreshToken -AsPlainText -Force) | Out-Null
         } catch {
             Write-Error "Error updating Beatport Key Vault Secrets in Azure Key Vault [$($env:KEY_VAULT_NAME)]: $_"
         }

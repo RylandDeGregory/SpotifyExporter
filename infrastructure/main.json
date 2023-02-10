@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.14.6.61914",
-      "templateHash": "13023313341727273041"
+      "templateHash": "9905335159179125663"
     }
   },
   "parameters": {
@@ -159,9 +159,9 @@
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
-      "name": "[guid(resourceId('Microsoft.Web/sites', parameters('functionAppName')), resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6'))]",
+      "name": "[guid(resourceId('Microsoft.Web/sites', parameters('functionAppName')), resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'))]",
       "properties": {
-        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
         "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2022-03-01', 'full').identity.principalId]",
         "principalType": "ServicePrincipal"
       },
@@ -170,7 +170,7 @@
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ],
       "metadata": {
-        "description": "Allows Function App Managed Identity to use Key Vault Secrets"
+        "description": "Allows Function App Managed Identity to use and update Key Vault Secrets"
       }
     },
     {
