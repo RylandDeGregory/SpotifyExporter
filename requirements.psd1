@@ -2,5 +2,6 @@
 # See https://aka.ms/functionsmanageddependency for additional information.
 #
 @{
-    # 'Az' = '9.*'
+    'Az.Accounts' = '2.*'
+    'Az.KeyVault' = '4.*'
 }

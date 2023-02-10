@@ -37,6 +37,20 @@ param spotifyClientSecret string
 @secure()
 param spotifyRefreshToken string
 
+@description('Beatport Application Client ID. Recommended to leave as default. Default: Beatport API Docs Client Id')
+param beatportClientId string = '0GIvkCltVIuPkkwSJHp6NDb3s0potTjLBQr388Dd'
+
+@description('Value of the Beatport-AccessToken Key Vault secret')
+@secure()
+param beatportAccessToken string = ''
+
+@description('Value of the Beatport-RefreshToken Key Vault secret')
+@secure()
+param beatportRefreshToken string = ''
+
+@description('Playlist name to sync between Spotify and Beatport')
+param syncedPlaylistName string
+
 
 // Default logging policy for all resources
 var defaultLogOrMetric = {
@@ -243,6 +257,10 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
           value: 'User'
         }
         {
+          name: 'KEY_VAULT_NAME'
+          value: kv.name
+        }
+        {
           name: 'SPOTIFY_CLIENT_ID'
           value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=Spotify-ClientID)'
         }
@@ -253,6 +271,14 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'SPOTIFY_REFRESH_TOKEN'
           value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=Spotify-RefreshToken)'
+        }
+        {
+          name: 'BEATPORT_CLIENT_ID'
+          value: beatportClientId
+        }
+        {
+          name: 'SYNCED_PLAYLIST_NAME'
+          value: syncedPlaylistName
         }
       ]
       alwaysOn: false
@@ -301,23 +327,37 @@ resource kvDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-
 }
 
 // Key Vault secrets
-resource kvSecretClientId 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+resource kvSecretSpotifyClientId 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${kv.name}/Spotify-ClientId'
   properties: {
     value: spotifyClientId
   }
 }
 
-resource kvSecretClientSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+resource kvSecretCSpotifylientSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${kv.name}/Spotify-ClientSecret'
   properties: {
     value: spotifyClientSecret
   }
 }
 
-resource kvSecretRefreshToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+resource kvSecretSpotifyRefreshToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${kv.name}/Spotify-RefreshToken'
   properties: {
     value: spotifyRefreshToken
+  }
+}
+
+resource kvSecretBeatportAccessToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = if (beatportAccessToken != '') {
+  name: '${kv.name}/Beatport-AccessToken'
+  properties: {
+    value: beatportAccessToken
+  }
+}
+
+resource kvSecretBeatportRefreshToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = if (beatportRefreshToken != '') {
+  name: '${kv.name}/Beatport-RefreshToken'
+  properties: {
+    value: beatportRefreshToken
   }
 }

@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.13.1.58284",
-      "templateHash": "3329696671415452679"
+      "version": "0.14.6.61914",
+      "templateHash": "13023313341727273041"
     }
   },
   "parameters": {
@@ -73,21 +73,48 @@
       }
     },
     "spotifyClientId": {
-      "type": "secureString",
+      "type": "securestring",
       "metadata": {
         "description": "Value of the Spotify-ClientID Key Vault secret"
       }
     },
     "spotifyClientSecret": {
-      "type": "secureString",
+      "type": "securestring",
       "metadata": {
         "description": "Value of the Spotify-ClientSecret Key Vault secret"
       }
     },
     "spotifyRefreshToken": {
-      "type": "secureString",
+      "type": "securestring",
       "metadata": {
         "description": "Value of the Spotify-RefreshToken Key Vault secret"
+      }
+    },
+    "beatportClientId": {
+      "type": "string",
+      "defaultValue": "0GIvkCltVIuPkkwSJHp6NDb3s0potTjLBQr388Dd",
+      "metadata": {
+        "description": "Beatport Application Client ID. Recommended to leave as default. Default: Beatport API Docs Client Id"
+      }
+    },
+    "beatportAccessToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Value of the Beatport-AccessToken Key Vault secret"
+      }
+    },
+    "beatportRefreshToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Value of the Beatport-RefreshToken Key Vault secret"
+      }
+    },
+    "syncedPlaylistName": {
+      "type": "string",
+      "metadata": {
+        "description": "Playlist name to sync between Spotify and Beatport"
       }
     }
   },
@@ -321,6 +348,10 @@
               "value": "User"
             },
             {
+              "name": "KEY_VAULT_NAME",
+              "value": "[parameters('keyVaultName')]"
+            },
+            {
               "name": "SPOTIFY_CLIENT_ID",
               "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=Spotify-ClientID)', parameters('keyVaultName'))]"
             },
@@ -331,6 +362,14 @@
             {
               "name": "SPOTIFY_REFRESH_TOKEN",
               "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=Spotify-RefreshToken)', parameters('keyVaultName'))]"
+            },
+            {
+              "name": "BEATPORT_CLIENT_ID",
+              "value": "[parameters('beatportClientId')]"
+            },
+            {
+              "name": "SYNCED_PLAYLIST_NAME",
+              "value": "[parameters('syncedPlaylistName')]"
             }
           ],
           "alwaysOn": false
@@ -429,6 +468,30 @@
       "name": "[format('{0}/Spotify-RefreshToken', parameters('keyVaultName'))]",
       "properties": {
         "value": "[parameters('spotifyRefreshToken')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('beatportAccessToken'), ''))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/Beatport-AccessToken', parameters('keyVaultName'))]",
+      "properties": {
+        "value": "[parameters('beatportAccessToken')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('beatportRefreshToken'), ''))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/Beatport-RefreshToken', parameters('keyVaultName'))]",
+      "properties": {
+        "value": "[parameters('beatportRefreshToken')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
