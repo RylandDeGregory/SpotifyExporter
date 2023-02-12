@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.13.1.58284",
-      "templateHash": "12621767646450004463"
+      "version": "0.14.6.61914",
+      "templateHash": "733491964086032667"
     }
   },
   "parameters": {
@@ -94,19 +94,19 @@
       }
     },
     "spotifyClientId": {
-      "type": "secureString",
+      "type": "securestring",
       "metadata": {
         "description": "Value of the Spotify-ClientID Key Vault secret"
       }
     },
     "spotifyClientSecret": {
-      "type": "secureString",
+      "type": "securestring",
       "metadata": {
         "description": "Value of the Spotify-ClientSecret Key Vault secret"
       }
     },
     "spotifyRefreshToken": {
-      "type": "secureString",
+      "type": "securestring",
       "metadata": {
         "description": "Value of the Spotify-RefreshToken Key Vault secret"
       }
@@ -353,7 +353,7 @@
             },
             {
               "name": "WEBSITE_RUN_FROM_PACKAGE",
-              "value": "https://github.com/RylandDeGregory/SpotifyExporter/blob/master/FunctionApp.zip?raw=true"
+              "value": "https://github.com/RylandDeGregory/SpotifyExporter/blob/master/src.zip?raw=true"
             },
             {
               "name": "PLAYLIST_TYPE",
@@ -439,11 +439,11 @@
       ]
     },
     {
-      "condition": "[parameters('cosmosEnabled')]",
       "copy": {
         "name": "cosmosContainers",
         "count": "[length(variables('cosmosContainerNames'))]"
       },
+      "condition": "[parameters('cosmosEnabled')]",
       "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
       "apiVersion": "2022-05-15",
       "name": "[format('{0}/{1}/{2}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport', variables('cosmosContainerNames')[copyIndex()])]",
