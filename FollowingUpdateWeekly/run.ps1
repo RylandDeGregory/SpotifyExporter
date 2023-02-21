@@ -1,10 +1,10 @@
 <#
     .SYNOPSIS
-        Export Spotify user library
+        Export Spotify user followed artists
     .DESCRIPTION
-        Export Spotify user library to one or both .csv file on Azure Blob Storage and CosmosDB NoSQL collection using the Spotify web API with OAuth2 Client Authorization flow
+        Export Spotify user followed artists to one or both .csv file on Azure Blob Storage and CosmosDB NoSQL collection using the Spotify web API with OAuth2 Client Authorization flow
     .NOTES
-        - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user containing the 'user-library-read' and 'user-read-private' scopes
+        - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user containing the 'user-follow-read' and 'user-read-private' scopes
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
     .LINK
         https://ryland.dev
@@ -18,7 +18,7 @@ $SpotifyApiUrl = 'https://api.spotify.com/v1'
 $Headers = Get-SpotifyAccessToken
 #endregion Init
 
-#region GetLibrary
+#region GetFollowed
 try {
     $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/"
     $UserDisplayName = $User.display_name
@@ -41,10 +41,10 @@ try {
 } catch {
     Write-Error "Error getting list of followed artists for user [$UserDisplayName]: $_"
 }
-#endregion GetLibrary
+#endregion GetFollowed
 
-#region ProcessLibrary
-Write-Information "Create collection of output objects for [$($UserLibrary.items.Count)] tracks in user Library"
+#region ProcessFollowed
+Write-Information "Create collection of output objects for [$($Followed.items.Count)] followed artists"
 $ArtistArray = foreach ($Artist in $Followed) {
     [PSCustomObject]@{
         Name      = $Artist.name
@@ -54,7 +54,7 @@ $ArtistArray = foreach ($Artist in $Followed) {
         id        = $Artist.id
     }
 }
-#endregion ProcessLibrary
+#endregion ProcessFollowed
 
 #region Output
 if ($env:COSMOS_ENABLED -eq 'True') {
