@@ -233,15 +233,15 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=StorageAccount-ConnectionString)'
         }
         {
           name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
+          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=StorageAccount-ConnectionString)'
         }
         {
           name: 'COSMOS_CONNECTION_STRING'
-          value: cosmosEnabled ? cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString : 'null'
+          value: cosmosEnabled ? '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=CosmosDB-ConnectionString)' : 'null'
         }
         {
           name: 'COSMOS_ENABLED'
@@ -401,6 +401,13 @@ resource kvDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-
 }
 
 // Key Vault secrets
+resource kvSecretStorageCS 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+  name: '${kv.name}/StorageAccount-ConnectionString'
+  properties: {
+    value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
+  }
+}
+
 resource kvSecretClientId 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${kv.name}/Spotify-ClientId'
   properties: {
@@ -419,5 +426,12 @@ resource kvSecretRefreshToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${kv.name}/Spotify-RefreshToken'
   properties: {
     value: spotifyRefreshToken
+  }
+}
+
+resource kvSecretCosmosCS 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = if (cosmosEnabled) {
+  name: '${kv.name}/CosmosDB-ConnectionString'
+  properties: {
+    value: cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
   }
 }
