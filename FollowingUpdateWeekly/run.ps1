@@ -22,7 +22,7 @@ $Headers = Get-SpotifyAccessToken
 try {
     $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/"
     $UserDisplayName = $User.display_name
-    Write-Information "Process Library for Spotify user [$UserDisplayName]"
+    Write-Information "Process followed artists for Spotify user [$UserDisplayName]"
 } catch {
     Write-Error "Error getting the authenticated user's Spotify profile: $_"
 }
