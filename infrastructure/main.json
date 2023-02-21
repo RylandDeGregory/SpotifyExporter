@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.14.6.61914",
-      "templateHash": "15756250002556082707"
+      "templateHash": "10794450940481993912"
     }
   },
   "parameters": {
@@ -475,6 +475,7 @@
       ]
     },
     {
+      "condition": "[parameters('cosmosEnabled')]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', toLower(parameters('cosmosAccountName')))]",
