@@ -330,7 +330,7 @@ resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022
   }
 }
 
-resource cosmosContainers 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-05-15' = [for containerName in cosmosContainerNames: if(cosmosEnabled) {
+resource cosmosContainers 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-05-15' = [for containerName in cosmosContainerNames: if (cosmosEnabled) {
   parent: cosmosDatabase
   name: containerName
   properties: {
