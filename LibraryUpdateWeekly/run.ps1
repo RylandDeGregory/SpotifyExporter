@@ -1,10 +1,10 @@
 <#
     .SYNOPSIS
-        Export Spotify user library to a .csv file on Azure Blob Storage
+        Export Spotify user library
     .DESCRIPTION
-        Export Spotify user library to .csv file using the Spotify web API with OAuth2 Client Authorization flow
+        Export Spotify user library to one or both .csv file on Azure Blob Storage and CosmosDB NoSQL collection using the Spotify web API with OAuth2 Client Authorization flow
     .NOTES
-        - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user
+        - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user containing the 'user-library-read' and 'user-read-private' scopes
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
     .LINK
         https://ryland.dev
@@ -51,21 +51,29 @@ $UserLibrary = for ($i = 0; $i -lt $LibraryPages; $i++) {
 Write-Information "Create collection of output objects for [$($UserLibrary.items.Count)] tracks in user Library"
 $TrackArray = foreach ($Track in $UserLibrary.items) {
     [PSCustomObject]@{
-        AddedAt      = $Track.added_at
-        Name         = $Track.track.name
-        TrackURL     = $Track.track.external_urls.spotify
-        Artist       = $Track.track.artists.name | Join-String -Separator ', '
-        ArtistURL    = $Track.track.artists.external_urls.spotify | Join-String -Separator ', '
-        Album        = $Track.track.album.name
-        AlbumURL     = $Track.track.album.external_urls.spotify
+        AddedAt   = $Track.added_at
+        Name      = $Track.track.name
+        TrackURL  = $Track.track.external_urls.spotify
+        Artist    = $Track.track.artists.name | Join-String -Separator ', '
+        ArtistURL = $Track.track.artists.external_urls.spotify | Join-String -Separator ', '
+        Album     = $Track.track.album.name
+        AlbumURL  = $Track.track.album.external_urls.spotify
+        id        = $Track.track.id
     }
 }
 #endregion ProcessLibrary
 
 #region Output
-Write-Information 'Convert output collection of objects to CSV'
-$Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation
+if ($env:COSMOS_ENABLED -eq 'True') {
+    Write-Information 'Export collection of objects to CosmosDB'
+    Push-OutputBinding -Name OutputDocument -Value $TrackArray
+}
 
-Write-Information 'Upload CSV to Azure Storage'
-Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
+if ($env:STORAGE_ENABLED -eq 'True') {
+    Write-Information 'Convert output collection of objects to CSV'
+    $Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation
+
+    Write-Information 'Upload CSV to Azure Storage'
+    Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
+}
 #endregion Output
