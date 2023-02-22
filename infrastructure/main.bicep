@@ -447,7 +447,7 @@ resource kvSecretClientId 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   }
 }
 
-resource kvSecretCSpotifylientSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
+resource kvSecretSpotifyClientSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
   name: '${kv.name}/Spotify-ClientSecret'
   properties: {
     value: spotifyClientSecret
