@@ -64,7 +64,7 @@ try {
     Write-Error "[ERROR] Error obtaining Refresh Token from Beatport API: $_"
 }
 
-Write-Output '*****Beatport Refresh Token*****'
+Write-Output '*****Beatport Access and Refresh Tokens*****'
 Write-Output $TokenResponse.Content | ConvertFrom-Json
-Write-Output '*******************************'
+Write-Output '********************************************'
 #endregion GetRefreshToken
