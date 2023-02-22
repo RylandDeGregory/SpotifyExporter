@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.14.6.61914",
-      "templateHash": "10158729725122994977"
+      "templateHash": "4663343248245596867"
     }
   },
   "parameters": {
@@ -633,6 +633,30 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('beatportAccessToken'), ''))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/Beatport-AccessToken', parameters('keyVaultName'))]",
+      "properties": {
+        "value": "[parameters('beatportAccessToken')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[not(equals(parameters('beatportRefreshToken'), ''))]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
+      "name": "[format('{0}/Beatport-RefreshToken', parameters('keyVaultName'))]",
+      "properties": {
+        "value": "[parameters('beatportRefreshToken')]"
+      },
+      "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     }

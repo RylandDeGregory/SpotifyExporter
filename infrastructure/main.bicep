@@ -467,3 +467,17 @@ resource kvSecretCosmosCS 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = if (c
     value: cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
   }
 }
+
+resource kvSecretBeatportAccessToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = if (beatportAccessToken != '') {
+  name: '${kv.name}/Beatport-AccessToken'
+  properties: {
+    value: beatportAccessToken
+  }
+}
+
+resource kvSecretBeatportRefreshToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = if (beatportRefreshToken != '') {
+  name: '${kv.name}/Beatport-RefreshToken'
+  properties: {
+    value: beatportRefreshToken
+  }
+}
