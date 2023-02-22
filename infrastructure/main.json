@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.14.6.61914",
-      "templateHash": "8644554452589956018"
+      "templateHash": "10158729725122994977"
     }
   },
   "parameters": {
@@ -21,6 +21,20 @@
       "defaultValue": false,
       "metadata": {
         "description": "Switch to enable/disable DiagnosticSettings for the resources. Default: false"
+      }
+    },
+    "cosmosEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Switch to enable/disable provisioning and exporting to a Cosmos DB NoSQL Account. Default: false"
+      }
+    },
+    "storageExportEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Switch to enable/disable exporting CSVs to Azure Blob Storage. Default: true"
       }
     },
     "uniqueSuffix": {
@@ -63,6 +77,13 @@
       "defaultValue": "[format('func-spotifyexport-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
         "description": "Function App name. Default: func-spotifyexport-$<uniqueSuffix>"
+      }
+    },
+    "cosmosAccountName": {
+      "type": "string",
+      "defaultValue": "[format('cosno-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "metadata": {
+        "description": "Cosmos DB Account name. Default: cosno-spotifyexport-$<uniqueSuffix>"
       }
     },
     "keyVaultName": {
@@ -127,7 +148,13 @@
         "days": "[if(parameters('logsEnabled'), 30, 0)]",
         "enabled": "[parameters('logsEnabled')]"
       }
-    }
+    },
+    "cosmosContainerNames": [
+      "Following",
+      "Library",
+      "Playlist",
+      "RecentlyPlayed"
+    ]
   },
   "resources": [
     {
@@ -323,7 +350,7 @@
             },
             {
               "name": "AzureWebJobsStorage",
-              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-05-01').keys[0].value)]"
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=StorageAccount-ConnectionString)', parameters('keyVaultName'))]"
             },
             {
               "name": "AzureWebJobs.HourlyPlaylistBeatportSync.Disabled",
@@ -331,7 +358,19 @@
             },
             {
               "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-05-01').keys[0].value)]"
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=StorageAccount-ConnectionString)', parameters('keyVaultName'))]"
+            },
+            {
+              "name": "COSMOS_CONNECTION_STRING",
+              "value": "[if(parameters('cosmosEnabled'), format('@Microsoft.KeyVault(VaultName={0};SecretName=CosmosDB-ConnectionString)', parameters('keyVaultName')), 'null')]"
+            },
+            {
+              "name": "COSMOS_ENABLED",
+              "value": "[format('{0}', parameters('cosmosEnabled'))]"
+            },
+            {
+              "name": "STORAGE_ENABLED",
+              "value": "[format('{0}', parameters('storageExportEnabled'))]"
             },
             {
               "name": "WEBSITE_CONTENTSHARE",
@@ -384,8 +423,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]",
         "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     },
     {
@@ -404,6 +442,100 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2022-05-15",
+      "name": "[toLower(parameters('cosmosAccountName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "enableFreeTier": true,
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]"
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2022-05-15",
+      "name": "[format('{0}/{1}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]",
+      "properties": {
+        "resource": {
+          "id": "cosmos-spotifyexport"
+        },
+        "options": {
+          "throughput": 1000
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "cosmosContainers",
+        "count": "[length(variables('cosmosContainerNames'))]"
+      },
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2022-05-15",
+      "name": "[format('{0}/{1}/{2}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport', variables('cosmosContainerNames')[copyIndex()])]",
+      "properties": {
+        "resource": {
+          "id": "[variables('cosmosContainerNames')[copyIndex()]]",
+          "partitionKey": {
+            "paths": [
+              "/id"
+            ],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "automatic": true,
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/_etag/?"
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]"
+      ]
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', toLower(parameters('cosmosAccountName')))]",
+      "name": "All Logs and Metrics",
+      "properties": {
+        "logs": [
+          "[union(createObject('categoryGroup', 'allLogs'), variables('defaultLogOrMetric'))]"
+        ],
+        "metrics": [
+          "[union(createObject('category', 'AllMetrics'), variables('defaultLogOrMetric'))]"
+        ],
+        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       ]
     },
@@ -449,6 +581,18 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2022-07-01",
+      "name": "[format('{0}/StorageAccount-ConnectionString', parameters('keyVaultName'))]",
+      "properties": {
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-05-01').keys[0].value)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2022-07-01",
       "name": "[format('{0}/Spotify-ClientId', parameters('keyVaultName'))]",
       "properties": {
         "value": "[parameters('spotifyClientId')]"
@@ -480,26 +624,15 @@
       ]
     },
     {
-      "condition": "[not(equals(parameters('beatportAccessToken'), ''))]",
+      "condition": "[parameters('cosmosEnabled')]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2022-07-01",
-      "name": "[format('{0}/Beatport-AccessToken', parameters('keyVaultName'))]",
+      "name": "[format('{0}/CosmosDB-ConnectionString', parameters('keyVaultName'))]",
       "properties": {
-        "value": "[parameters('beatportAccessToken')]"
+        "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName'))), '2022-05-15').connectionStrings[0].connectionString]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
-      ]
-    },
-    {
-      "condition": "[not(equals(parameters('beatportRefreshToken'), ''))]",
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2022-07-01",
-      "name": "[format('{0}/Beatport-RefreshToken', parameters('keyVaultName'))]",
-      "properties": {
-        "value": "[parameters('beatportRefreshToken')]"
-      },
-      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]",
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     }
