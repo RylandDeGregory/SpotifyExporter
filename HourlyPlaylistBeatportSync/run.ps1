@@ -1,11 +1,15 @@
 <#
     .SYNOPSIS
-        Export Spotify playlists to a .csv file on Azure Blob Storage
+        Synchronize a Spotify playlist to a Beatport playlist
     .DESCRIPTION
-        Export Spotify playlists to .csv file using the Spotify web API with OAuth2 Client Authorization flow
+        Synchronize a Spotify playlist to a Beatport playlist. Utilizes the Spotify Web API and the Beatport Web API
+        Synchronization is a best-effort process using the native Beatport Search Endpoint
+        If multiple tracks are returned from a Beatport query, the first result is added to the playlist
     .NOTES
         - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
+        - Assumes that a Beatport OAuth2 Refresh token has been granted for a user
+        - See the repository's README.md file for more information
     .LINK
         https://ryland.dev
 #>
