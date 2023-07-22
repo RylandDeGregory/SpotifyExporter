@@ -14,9 +14,9 @@ The **SpotifyExporter** application requires the creation of 3 secrets in order 
 
 Users must obtain a Client ID and Client Secret by registering a [Spotify App](https://developer.spotify.com/documentation/general/guides/app-settings/), as well as an OAuth 2 Refresh token using the [Authorization Code Flow](https://developer.spotify.com/documentation/general/guides/authorization-guide/#authorization-code-flow).
 
-Once you have created your app, use the `Client ID`, `Client Secret`, and `Redirect URI` as the parameters for [Get-SpotifyRefreshToken.ps1](auth/Get-SpotifyRefreshToken.ps1).
-
 > If you don't know what to use as a Redirect URI, http://localhost:8080/spotifyexporter is a good default.
+
+Once you have created your app, use the `Client ID`, `Client Secret`, and `Redirect URI` as the parameters for [Get-SpotifyRefreshToken.ps1](auth/Get-SpotifyRefreshToken.ps1) in the following section.
 
 ### Obtain Refresh Token for a Spotify user
 
