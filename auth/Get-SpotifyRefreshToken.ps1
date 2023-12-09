@@ -8,6 +8,8 @@
     .NOTES
         https://developer.spotify.com/dashboard
         https://developer.spotify.com/documentation/general/guides/authorization-guide/#authorization-code-flow
+    .LINK
+        https://ryland.dev
 #>
 [CmdletBinding()]
 param (
@@ -30,6 +32,7 @@ param (
 )
 #region Init
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Web
 
 [System.Uri]$RedirectUri = $RedirectUri
 $EncodedRedirectUri = [System.Web.HTTPUtility]::UrlEncode($RedirectUri.AbsoluteUri)
@@ -61,8 +64,10 @@ if ($ManualAuth) {
         Write-Verbose 'HTTP Listener is ready'
         $HttpListenerReady = $true
     } else {
-        Write-Verbose 'HTTP Listener is not ready. Using ManualAuth method'
+        Write-Warning 'HTTP Listener is not ready. Using ManualAuth method'
         $HttpListenerReady = $false
+        $HttpListener.Stop()
+        $ManualAuth = $true
     }
 }
 #endregion StartListener
@@ -71,15 +76,21 @@ if ($ManualAuth) {
 if ($ManualAuth) {
     Write-Output "[INFO] Navigate to the following URL in a web browser:`n$AuthCodeUri"
 } else {
-    if ($IsMacOS) {
-        Write-Output '[INFO] Opening MacOS default browser for user login'
-        Invoke-Expression 'open -u "$AuthCodeUri"'
-    } elseif ($IsLinux) {
-        Write-Output '[INFO] Opening Linux default browser for user login (requires a freedesktop.org compliant desktop)'
-        Start-Process xdg-open $AuthCodeUri
-    } else {
-        Write-Output '[INFO] Opening Windows default browser for user login'
-        Invoke-Expression "rundll32 url.dll, FileProtocolHandler $AuthCodeUri"
+    try {
+        if ($IsMacOS) {
+            Write-Output '[INFO] Opening MacOS default browser for user login'
+            Invoke-Expression 'open -u "$AuthCodeUri"'
+        } elseif ($IsLinux) {
+            Write-Output '[INFO] Opening Linux default browser for user login (requires a freedesktop.org compliant desktop)'
+            Start-Process xdg-open $AuthCodeUri
+        } else {
+            Write-Output '[INFO] Opening Windows default browser for user login'
+            Invoke-Expression "rundll32 url.dll, FileProtocolHandler '$AuthCodeUri'"
+        }
+    } catch {
+        Write-Verbose 'Stop HTTP Listener'
+        $HttpListener.Stop()
+        Write-Error "Error opening default browser for user login: $_"
     }
 }
 #endregion OpenBrowser
@@ -110,7 +121,7 @@ if ($HttpListenerReady) {
             }
         }
     } catch {
-        Write-Error "[ERROR] Error encountered while listening for browser Response: $_"
+        Write-Error "Error while listening for browser Response: $_"
     } finally {
         Write-Verbose 'Stop HTTP Listener'
         $HttpListener.Stop()
@@ -125,19 +136,19 @@ if ($HttpListenerReady) {
 $AuthResponseQueryString = [System.Web.HttpUtility]::ParseQueryString($AuthResponseUri.Query)
 
 if ([string]::IsNullOrEmpty($AuthResponseUri.OriginalString)) {
-    Write-Error '[ERROR] Response cannot be empty'
+    Write-Error 'Response cannot be empty'
 }
 if ($AuthResponseQueryString['state'] -ne $AuthState) {
-    Write-Error "[ERROR] Response state [$($AuthResponseQueryString['state'])] does not match the request state [$AuthState]"
+    Write-Error "Response state [$($AuthResponseQueryString['state'])] does not match the request state [$AuthState]"
 }
 if ($AuthResponseQueryString['error']) {
-    Write-Error "[ERROR] Response contains an error: $($AuthResponseQueryString.Error)"
+    Write-Error "Response contains an error: $($AuthResponseQueryString.Error)"
 }
 if ($AuthResponseQueryString['code']) {
     Write-Verbose 'Received Authorization Code for user'
     $AuthCode = $AuthResponseQueryString['code']
 } else {
-    Write-Error '[ERROR] Response does not contain an Authorization Code'
+    Write-Error 'Response does not contain an Authorization Code'
 }
 #endregion ValidateAuthCode
 
@@ -154,7 +165,7 @@ try {
     Write-Verbose 'Request Spotify API Refresh Token using Authorization Code and Application credentials'
     $TokenResponse = Invoke-RestMethod -Method Post -Uri $TokenUri -Body $TokenBody
 } catch {
-    Write-Error "[ERROR] Error obtaining Refresh Token from Spotify API: $_"
+    Write-Error "Error obtaining Refresh Token from Spotify API: $_"
 }
 
 Write-Output '*****Spotify Refresh Token*****'
