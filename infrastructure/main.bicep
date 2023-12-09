@@ -236,10 +236,6 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
           value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=StorageAccount-ConnectionString)'
         }
         {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=StorageAccount-ConnectionString)'
-        }
-        {
           name: 'COSMOS_CONNECTION_STRING'
           value: cosmosEnabled ? '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=CosmosDB-ConnectionString)' : 'null'
         }
@@ -250,10 +246,6 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         {
           name: 'STORAGE_ENABLED'
           value: '${storageExportEnabled}'
-        }
-        {
-          name: 'WEBSITE_CONTENTSHARE'
-          value: toLower(functionAppName)
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
