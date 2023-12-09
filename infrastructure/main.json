@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.14.6.61914",
-      "templateHash": "10794450940481993912"
+      "version": "0.23.1.45101",
+      "templateHash": "6593082609327719224"
     }
   },
   "parameters": {
@@ -324,10 +324,6 @@
               "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=StorageAccount-ConnectionString)', parameters('keyVaultName'))]"
             },
             {
-              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=StorageAccount-ConnectionString)', parameters('keyVaultName'))]"
-            },
-            {
               "name": "COSMOS_CONNECTION_STRING",
               "value": "[if(parameters('cosmosEnabled'), format('@Microsoft.KeyVault(VaultName={0};SecretName=CosmosDB-ConnectionString)', parameters('keyVaultName')), 'null')]"
             },
@@ -338,10 +334,6 @@
             {
               "name": "STORAGE_ENABLED",
               "value": "[format('{0}', parameters('storageExportEnabled'))]"
-            },
-            {
-              "name": "WEBSITE_CONTENTSHARE",
-              "value": "[toLower(parameters('functionAppName'))]"
             },
             {
               "name": "FUNCTIONS_EXTENSION_VERSION",
