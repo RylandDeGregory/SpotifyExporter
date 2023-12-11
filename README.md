@@ -48,6 +48,13 @@ This application can be deployed directly to Azure as a PowerShell Function App.
 
 Provide the **Spotify Client Id**, **Spotify Client Secret**, and **Spotify Refresh Token** obtained above as the required parameters for the Azure Resource Manager Custom Deployment.
 
+![Sample Azure Deployment](https://github.com/RylandDeGregory/SpotifyExporter/assets/18073815/92542e7d-8eed-46c7-af67-ea8582141d4b)
+
+- To enable diagnostic loggint to an Azure Log Analytics Workspace, set the `Logs Enabled` deployment parameter to **true**.
+    - _Incurs additional cost for log ingestion and storage_.
+- To enable data export to a free-tier Azure Cosmos DB NoSQL Database, set the `Cosmos Enabled` deployment parameter to **true**.
+- To disable data export to Azure Storage as `.csv` files, set the `Storage Export Enabled` deployment parameter to **false**.
+
 ## Contact and Contribute
 
 If you run into any issues with this repo, please open an issue or pull request.
