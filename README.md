@@ -48,7 +48,7 @@ This application can be deployed directly to Azure as a PowerShell Function App.
 
 Provide the **Spotify Client Id**, **Spotify Client Secret**, and **Spotify Refresh Token** obtained above as the required parameters for the Azure Resource Manager Custom Deployment.
 
-![Sample Azure Deployment](https://github.com/RylandDeGregory/SpotifyExporter/assets/18073815/f549afa8-365c-4894-88a1-d2e688bba5d7)
+![Sample Azure Template Deployment](https://github.com/RylandDeGregory/SpotifyExporter/assets/18073815/89fe1d6a-fc57-40a2-b863-9569448be967)
 
 - To enable diagnostic logging to an Azure Log Analytics Workspace, set the `Logs Enabled` deployment parameter to **true**.
     - _Incurs additional cost for log ingestion and storage_.
