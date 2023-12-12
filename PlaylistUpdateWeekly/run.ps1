@@ -32,12 +32,15 @@ try {
     $Response = @{
         next = "$SpotifyApiUrl/me/playlists?limit=50"
     }
+    $Count = 0
     $Playlists = while ($Response.next) {
         $Response = Invoke-RestMethod -Method Get -Headers $Headers -Uri $Response.next
         $Response.items
+        $Count += $Response.items.count
+        Write-Verbose "Processed [$Count/$($Response.total)] playlists"
     }
 } catch {
-    Write-Error "Error getting list of followed artists for user [$UserDisplayName]: $_"
+    Write-Error "Error getting list of playlists for user [$UserDisplayName]: $_"
 }
 
 # Process playlist types based on App Setting
@@ -59,6 +62,7 @@ $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
         $Response = @{
             next = "$SpotifyApiUrl/playlists/$($Playlist.id)/tracks"
         }
+        $Count = 0
         while ($Response.next) {
             $Response = Invoke-RestMethod -Method Get -Headers $Headers -Uri $Response.next
             foreach ($Track in $Response.items) {
@@ -77,6 +81,8 @@ $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
                     id            = "$($Playlist.id)_$($Track.track.id)"
                 }
             }
+            $Count += $Response.items.count
+            Write-Verbose "Processed [$Count/$($Response.total)] tracks in Playlist [$($Playlist.name)]"
         }
     } catch {
         Write-Error "Error getting list of tracks in Playlist [$($Playlist.name)]: $_"

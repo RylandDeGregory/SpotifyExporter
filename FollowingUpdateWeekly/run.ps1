@@ -34,9 +34,12 @@ try {
             next = "$SpotifyApiUrl/me/following?type=artist&limit=50"
         }
     }
+    $Count = 0
     $Followed = while ($Response.artists.next) {
         $Response = Invoke-RestMethod -Method Get -Headers $Headers -Uri $Response.artists.next
         $Response.artists.items
+        $Count += $Response.artists.items.count
+        Write-Verbose "Processed [$Count/$($Response.artists.total)] followed artists"
     }
 } catch {
     Write-Error "Error getting list of followed artists for user [$UserDisplayName]: $_"

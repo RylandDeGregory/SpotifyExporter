@@ -27,29 +27,35 @@ try {
     Write-Error "Error getting the authenticated user's Spotify profile: $_"
 }
 
-try {
-    # Determine the user's number of saved tracks and calculate the number of paginated requests to make
-    $Library = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/tracks"
-    $LibraryPages = [math]::ceiling($Library.total / 50)
-    Write-Information "Library contains [$($Library.total)] tracks"
-} catch {
-    Write-Error "Error getting the number of saved tracks for user [$UserDisplayName]: $_"
+$Response = @{
+    next = "$SpotifyApiUrl/me/tracks?limit=50"
 }
-
-# Build collection of saved tracks by processing all pages
-$UserLibrary = for ($i = 0; $i -lt $LibraryPages; $i++) {
+$Count = 0
+$UserLibrary = while ($Response.next) {
     try {
-        Write-Verbose "Processing Library page [$i/$LibraryPages]" -Verbose
-        Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/tracks?limit=50&offset=$($i * 50)"
+        $Response = Invoke-RestMethod -Method Get -Headers $Headers -Uri $Response.next
+        $Response.items
+        $Count += $Response.items.count
+        Write-Verbose "Processed [$Count/$($Response.total)] saved tracks"
+        if ($Count % 1000 -eq 0) {
+            Write-Information "Processed [$Count] tracks. Sleep 10 seconds to avoid rate limiting."
+            Start-Sleep -Seconds 10
+        }
     } catch {
-        Write-Error "Error getting list of saved tracks for user [$UserDisplayName]: $_"
+        if ($_.Exception.Response.StatusCode -eq 500) { # Should be 429 but Spotify returns 500 for this endpoint
+            Write-Warning 'Rate limit exceeded. Try again in 30 seconds'
+            Start-Sleep -Seconds 30
+        } else {
+            Write-Error "Error getting list of saved tracks for user [$UserDisplayName]: $_"
+            break
+        }
     }
 }
 #endregion GetLibrary
 
 #region ProcessLibrary
-Write-Information "Create collection of output objects for [$($UserLibrary.items.Count)] tracks in user Library"
-$TrackArray = foreach ($Track in $UserLibrary.items) {
+Write-Information "Create collection of output objects for [$($UserLibrary.Count)] tracks in user Library"
+$TrackArray = foreach ($Track in $UserLibrary) {
     [PSCustomObject]@{
         AddedAt   = $Track.added_at
         Name      = $Track.track.name
