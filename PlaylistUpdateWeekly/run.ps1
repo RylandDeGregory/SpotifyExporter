@@ -37,7 +37,7 @@ try {
         $Response = Invoke-RestMethod -Method Get -Headers $Headers -Uri $Response.next
         $Response.items
         $Count += $Response.items.count
-        Write-Verbose "Processed [$Count/$($Response.total)] playlists" -Verbose
+        Write-Verbose "Processed [$Count/$($Response.total)] playlists"
     }
 } catch {
     Write-Error "Error getting list of playlists for user [$UserDisplayName]: $_"
@@ -82,7 +82,7 @@ $TrackArray = foreach ($Playlist in $ProcessPlaylists) {
                 }
             }
             $Count += $Response.items.count
-            Write-Verbose "Processed [$Count/$($Response.total)] tracks in Playlist [$($Playlist.name)]" -Verbose
+            Write-Verbose "Processed [$Count/$($Response.total)] tracks in Playlist [$($Playlist.name)]"
         }
     } catch {
         Write-Error "Error getting list of tracks in Playlist [$($Playlist.name)]: $_"

@@ -36,9 +36,9 @@ $UserLibrary = while ($Response.next) {
         $Response = Invoke-RestMethod -Method Get -Headers $Headers -Uri $Response.next
         $Response.items
         $Count += $Response.items.count
-        Write-Verbose "Processed [$Count/$($Response.total)] saved tracks" -Verbose
+        Write-Verbose "Processed [$Count/$($Response.total)] saved tracks"
         if ($Count % 1000 -eq 0) {
-            Write-Verbose 'Sleep 10 seconds to avoid rate limiting' -Verbose
+            Write-Information "Processed [$Count] tracks. Sleep 10 seconds to avoid rate limiting."
             Start-Sleep -Seconds 10
         }
     } catch {
