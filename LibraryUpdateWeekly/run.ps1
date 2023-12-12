@@ -54,8 +54,8 @@ $UserLibrary = while ($Response.next) {
 #endregion GetLibrary
 
 #region ProcessLibrary
-Write-Information "Create collection of output objects for [$($UserLibrary.items.Count)] tracks in user Library"
-$TrackArray = foreach ($Track in $UserLibrary.items) {
+Write-Information "Create collection of output objects for [$($UserLibrary.Count)] tracks in user Library"
+$TrackArray = foreach ($Track in $UserLibrary) {
     [PSCustomObject]@{
         AddedAt   = $Track.added_at
         Name      = $Track.track.name
