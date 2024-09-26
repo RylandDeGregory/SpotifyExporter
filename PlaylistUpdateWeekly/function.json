@@ -18,9 +18,9 @@
       "direction": "out",
       "name": "outputDocument",
       "databaseName": "cosmos-spotifyexport",
-      "collectionName": "Playlist",
+      "containerName": "Playlist",
       "createIfNotExists": false,
-      "connectionStringSetting": "COSMOS_CONNECTION_STRING",
+      "connection": "COSMOS_CONNECTION_STRING",
       "partitionKey": "id"
     }
   ]
