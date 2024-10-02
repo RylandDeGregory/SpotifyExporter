@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.23.1.45101",
-      "templateHash": "6593082609327719224"
+      "version": "0.29.47.4906",
+      "templateHash": "632201253108906278"
     }
   },
   "parameters": {
@@ -46,51 +46,51 @@
     },
     "logAnalyticsWorkspaceName": {
       "type": "string",
-      "defaultValue": "[format('log-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "defaultValue": "[format('log-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
-        "description": "Log Analytics Workspace name. Default: log-spotifyexport-$<uniqueSuffix>"
+        "description": "Log Analytics Workspace name. Default: log-spotifyexp-$<uniqueSuffix>"
       }
     },
     "appInsightsName": {
       "type": "string",
-      "defaultValue": "[format('appi-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "defaultValue": "[format('appi-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
-        "description": "Application Insights name. Default: appi-spotifyexport-$<uniqueSuffix>"
+        "description": "Application Insights name. Default: appi-spotifyexp-$<uniqueSuffix>"
       }
     },
     "storageAccountName": {
       "type": "string",
-      "defaultValue": "[format('stspotifyexport{0}', parameters('uniqueSuffix'))]",
+      "defaultValue": "[format('stspotifyexp{0}', replace(parameters('uniqueSuffix'), '-', ''))]",
       "metadata": {
-        "description": "Storage Account name. Default: stspotifyexport$<uniqueSuffix>"
+        "description": "Storage Account name. Default: stspotifyexp$<uniqueSuffix>"
       }
     },
     "appServicePlanName": {
       "type": "string",
-      "defaultValue": "[format('asp-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "defaultValue": "[format('asp-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
-        "description": "App Service Plan name. Default: asp-spotifyexport-$<uniqueSuffix>"
+        "description": "App Service Plan name. Default: asp-spotifyexp-$<uniqueSuffix>"
       }
     },
     "functionAppName": {
       "type": "string",
-      "defaultValue": "[format('func-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "defaultValue": "[format('func-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
-        "description": "Function App name. Default: func-spotifyexport-$<uniqueSuffix>"
+        "description": "Function App name. Default: func-spotifyexp-$<uniqueSuffix>"
       }
     },
     "cosmosAccountName": {
       "type": "string",
-      "defaultValue": "[format('cosno-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "defaultValue": "[format('cosno-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
-        "description": "Cosmos DB Account name. Default: cosno-spotifyexport-$<uniqueSuffix>"
+        "description": "Cosmos DB Account name. Default: cosno-spotifyexp-$<uniqueSuffix>"
       }
     },
     "keyVaultName": {
       "type": "string",
-      "defaultValue": "[format('kv-spotifyexport-{0}', parameters('uniqueSuffix'))]",
+      "defaultValue": "[format('kv-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
-        "description": "Key Vault name. Default: kv-spotifyexport-$<uniqueSuffix>"
+        "description": "Key Vault name. Default: kv-spotifyexp-$<uniqueSuffix>"
       }
     },
     "spotifyClientId": {
@@ -113,13 +113,6 @@
     }
   },
   "variables": {
-    "defaultLogOrMetric": {
-      "enabled": "[parameters('logsEnabled')]",
-      "retentionPolicy": {
-        "days": "[if(parameters('logsEnabled'), 7, 0)]",
-        "enabled": "[parameters('logsEnabled')]"
-      }
-    },
     "cosmosContainerNames": [
       "Following",
       "Library",
@@ -129,13 +122,117 @@
   },
   "resources": [
     {
-      "type": "Microsoft.Authorization/locks",
-      "apiVersion": "2016-09-01",
-      "name": "DoNotDelete",
+      "copy": {
+        "name": "cosmosContainers",
+        "count": "[length(variables('cosmosContainerNames'))]"
+      },
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}/{2}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport', variables('cosmosContainerNames')[copyIndex()])]",
       "properties": {
-        "level": "CanNotDelete",
-        "notes": "This lock prevents the accidental deletion of resources"
-      }
+        "resource": {
+          "id": "[variables('cosmosContainerNames')[copyIndex()]]",
+          "partitionKey": {
+            "paths": [
+              "/id"
+            ],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "automatic": true,
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/_etag/?"
+              }
+            ]
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]"
+      ]
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]",
+      "properties": {
+        "resource": {
+          "id": "cosmos-spotifyexport"
+        },
+        "options": {
+          "throughput": 1000
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), 'Spotify-ClientId')]",
+      "properties": {
+        "value": "[parameters('spotifyClientId')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), 'Spotify-ClientSecret')]",
+      "properties": {
+        "value": "[parameters('spotifyClientSecret')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), 'Spotify-RefreshToken')]",
+      "properties": {
+        "value": "[parameters('spotifyRefreshToken')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('cosmosEnabled')]",
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), 'CosmosDB-ConnectionString')]",
+      "properties": {
+        "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName'))), '2024-05-15').connectionStrings[0].connectionString]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', parameters('keyVaultName'), 'StorageAccount-ConnectionString')]",
+      "properties": {
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ]
     },
     {
       "type": "Microsoft.Authorization/roleAssignments",
@@ -144,7 +241,7 @@
       "name": "[guid(resourceId('Microsoft.Web/sites', parameters('functionAppName')), resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'))]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
-        "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2022-03-01', 'full').identity.principalId]",
+        "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2023-12-01', 'full').identity.principalId]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
@@ -162,7 +259,7 @@
       "name": "[guid(resourceId('Microsoft.Web/sites', parameters('functionAppName')), resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6'))]",
       "properties": {
         "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
-        "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2022-03-01', 'full').identity.principalId]",
+        "principalId": "[reference(resourceId('Microsoft.Web/sites', parameters('functionAppName')), '2023-12-01', 'full').identity.principalId]",
         "principalType": "ServicePrincipal"
       },
       "dependsOn": [
@@ -174,8 +271,17 @@
       }
     },
     {
+      "type": "Microsoft.Authorization/locks",
+      "apiVersion": "2020-05-01",
+      "name": "DoNotDelete",
+      "properties": {
+        "level": "CanNotDelete",
+        "notes": "This lock prevents the accidental deletion of resources"
+      }
+    },
+    {
       "type": "Microsoft.OperationalInsights/workspaces",
-      "apiVersion": "2022-10-01",
+      "apiVersion": "2023-09-01",
       "name": "[parameters('logAnalyticsWorkspaceName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -185,16 +291,23 @@
       }
     },
     {
+      "condition": "[parameters('logsEnabled')]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('logAnalyticsWorkspaceName'))]",
       "name": "All Logs and Metrics",
       "properties": {
         "logs": [
-          "[union(createObject('categoryGroup', 'allLogs'), variables('defaultLogOrMetric'))]"
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
         ],
         "metrics": [
-          "[union(createObject('categoryGroup', 'allMetrics'), variables('defaultLogOrMetric'))]"
+          {
+            "category": "allMetrics",
+            "enabled": true
+          }
         ],
         "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       },
@@ -217,7 +330,7 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "apiVersion": "2022-05-01",
+      "apiVersion": "2023-05-01",
       "name": "[parameters('storageAccountName')]",
       "location": "[parameters('location')]",
       "kind": "StorageV2",
@@ -230,32 +343,23 @@
       }
     },
     {
-      "type": "Microsoft.Insights/diagnosticSettings",
-      "apiVersion": "2021-05-01-preview",
-      "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
-      "name": "All Logs and Metrics",
-      "properties": {
-        "metrics": [
-          "[union(createObject('categoryGroup', 'allMetrics'), variables('defaultLogOrMetric'))]"
-        ],
-        "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
-      ]
-    },
-    {
+      "condition": "[parameters('logsEnabled')]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}', parameters('storageAccountName'), 'default')]",
       "name": "All Logs and Metrics",
       "properties": {
         "logs": [
-          "[union(createObject('categoryGroup', 'allLogs'), variables('defaultLogOrMetric'))]"
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
         ],
         "metrics": [
-          "[union(createObject('categoryGroup', 'allMetrics'), variables('defaultLogOrMetric'))]"
+          {
+            "category": "Transaction",
+            "enabled": true
+          }
         ],
         "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       },
@@ -266,7 +370,7 @@
     },
     {
       "type": "Microsoft.Web/serverfarms",
-      "apiVersion": "2022-03-01",
+      "apiVersion": "2023-12-01",
       "name": "[parameters('appServicePlanName')]",
       "location": "[parameters('location')]",
       "kind": "linux",
@@ -279,13 +383,17 @@
       }
     },
     {
+      "condition": "[parameters('logsEnabled')]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.Web/serverfarms/{0}', parameters('appServicePlanName'))]",
       "name": "All Logs and Metrics",
       "properties": {
         "metrics": [
-          "[union(createObject('category', 'AllMetrics'), variables('defaultLogOrMetric'))]"
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
         ],
         "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       },
@@ -296,7 +404,7 @@
     },
     {
       "type": "Microsoft.Web/sites",
-      "apiVersion": "2022-03-01",
+      "apiVersion": "2023-12-01",
       "name": "[parameters('functionAppName')]",
       "location": "[parameters('location')]",
       "kind": "functionapp,linux",
@@ -309,7 +417,7 @@
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
         "keyVaultReferenceIdentity": "SystemAssigned",
         "siteConfig": {
-          "linuxFxVersion": "POWERSHELL|7.2",
+          "linuxFxVersion": "POWERSHELL|7.4",
           "appSettings": [
             {
               "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
@@ -374,16 +482,23 @@
       ]
     },
     {
+      "condition": "[parameters('logsEnabled')]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.Web/sites/{0}', parameters('functionAppName'))]",
       "name": "All Logs and Metrics",
       "properties": {
         "logs": [
-          "[union(createObject('categoryGroup', 'allLogs'), variables('defaultLogOrMetric'))]"
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
         ],
         "metrics": [
-          "[union(createObject('category', 'AllMetrics'), variables('defaultLogOrMetric'))]"
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
         ],
         "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       },
@@ -395,7 +510,7 @@
     {
       "condition": "[parameters('cosmosEnabled')]",
       "type": "Microsoft.DocumentDB/databaseAccounts",
-      "apiVersion": "2022-05-15",
+      "apiVersion": "2024-05-15",
       "name": "[toLower(parameters('cosmosAccountName'))]",
       "location": "[parameters('location')]",
       "properties": {
@@ -412,72 +527,23 @@
       }
     },
     {
-      "condition": "[parameters('cosmosEnabled')]",
-      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-      "apiVersion": "2022-05-15",
-      "name": "[format('{0}/{1}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]",
-      "properties": {
-        "resource": {
-          "id": "cosmos-spotifyexport"
-        },
-        "options": {
-          "throughput": 1000
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]"
-      ]
-    },
-    {
-      "copy": {
-        "name": "cosmosContainers",
-        "count": "[length(variables('cosmosContainerNames'))]"
-      },
-      "condition": "[parameters('cosmosEnabled')]",
-      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-      "apiVersion": "2022-05-15",
-      "name": "[format('{0}/{1}/{2}', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport', variables('cosmosContainerNames')[copyIndex()])]",
-      "properties": {
-        "resource": {
-          "id": "[variables('cosmosContainerNames')[copyIndex()]]",
-          "partitionKey": {
-            "paths": [
-              "/id"
-            ],
-            "kind": "Hash"
-          },
-          "indexingPolicy": {
-            "indexingMode": "consistent",
-            "automatic": true,
-            "includedPaths": [
-              {
-                "path": "/*"
-              }
-            ],
-            "excludedPaths": [
-              {
-                "path": "/_etag/?"
-              }
-            ]
-          }
-        }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', toLower(parameters('cosmosAccountName')), 'cosmos-spotifyexport')]"
-      ]
-    },
-    {
-      "condition": "[parameters('cosmosEnabled')]",
+      "condition": "[and(parameters('cosmosEnabled'), parameters('logsEnabled'))]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.DocumentDB/databaseAccounts/{0}', toLower(parameters('cosmosAccountName')))]",
       "name": "All Logs and Metrics",
       "properties": {
         "logs": [
-          "[union(createObject('categoryGroup', 'allLogs'), variables('defaultLogOrMetric'))]"
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
         ],
         "metrics": [
-          "[union(createObject('category', 'AllMetrics'), variables('defaultLogOrMetric'))]"
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
         ],
         "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       },
@@ -488,7 +554,7 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults",
-      "apiVersion": "2022-07-01",
+      "apiVersion": "2023-07-01",
       "name": "[parameters('keyVaultName')]",
       "location": "[parameters('location')]",
       "properties": {
@@ -507,80 +573,29 @@
       }
     },
     {
+      "condition": "[parameters('logsEnabled')]",
       "type": "Microsoft.Insights/diagnosticSettings",
       "apiVersion": "2021-05-01-preview",
       "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
       "name": "All Logs and Metrics",
       "properties": {
         "logs": [
-          "[union(createObject('categoryGroup', 'allLogs'), variables('defaultLogOrMetric'))]"
+          {
+            "categoryGroup": "allLogs",
+            "enabled": true
+          }
         ],
         "metrics": [
-          "[union(createObject('category', 'AllMetrics'), variables('defaultLogOrMetric'))]"
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
         ],
         "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2022-07-01",
-      "name": "[format('{0}/StorageAccount-ConnectionString', parameters('keyVaultName'))]",
-      "properties": {
-        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', parameters('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2022-05-01').keys[0].value)]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2022-07-01",
-      "name": "[format('{0}/Spotify-ClientId', parameters('keyVaultName'))]",
-      "properties": {
-        "value": "[parameters('spotifyClientId')]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2022-07-01",
-      "name": "[format('{0}/Spotify-ClientSecret', parameters('keyVaultName'))]",
-      "properties": {
-        "value": "[parameters('spotifyClientSecret')]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2022-07-01",
-      "name": "[format('{0}/Spotify-RefreshToken', parameters('keyVaultName'))]",
-      "properties": {
-        "value": "[parameters('spotifyRefreshToken')]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
-      ]
-    },
-    {
-      "condition": "[parameters('cosmosEnabled')]",
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2022-07-01",
-      "name": "[format('{0}/CosmosDB-ConnectionString', parameters('keyVaultName'))]",
-      "properties": {
-        "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName'))), '2022-05-15').connectionStrings[0].connectionString]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts', toLower(parameters('cosmosAccountName')))]",
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
       ]
     }
   ]
