@@ -13,26 +13,26 @@ param storageExportEnabled bool = true
 @description('A unique string to add as a suffix to all resources. Default: substring(uniqueString(resourceGroup().id), 0, 5)')
 param uniqueSuffix string = substring(uniqueString(resourceGroup().id), 0, 5)
 
-@description('Log Analytics Workspace name. Default: log-spotifyexport-$<uniqueSuffix>')
-param logAnalyticsWorkspaceName string = 'log-spotifyexport-${uniqueSuffix}'
+@description('Log Analytics Workspace name. Default: log-spotifyexp-$<uniqueSuffix>')
+param logAnalyticsWorkspaceName string = 'log-spotifyexp-${uniqueSuffix}'
 
-@description('Application Insights name. Default: appi-spotifyexport-$<uniqueSuffix>')
-param appInsightsName string = 'appi-spotifyexport-${uniqueSuffix}'
+@description('Application Insights name. Default: appi-spotifyexp-$<uniqueSuffix>')
+param appInsightsName string = 'appi-spotifyexp-${uniqueSuffix}'
 
-@description('Storage Account name. Default: stspotifyexport$<uniqueSuffix>')
-param storageAccountName string = 'stspotifyexport${uniqueSuffix}'
+@description('Storage Account name. Default: stspotifyexp$<uniqueSuffix>')
+param storageAccountName string = 'stspotifyexp${replace(uniqueSuffix, '-', '')}'
 
-@description('App Service Plan name. Default: asp-spotifyexport-$<uniqueSuffix>')
-param appServicePlanName string = 'asp-spotifyexport-${uniqueSuffix}'
+@description('App Service Plan name. Default: asp-spotifyexp-$<uniqueSuffix>')
+param appServicePlanName string = 'asp-spotifyexp-${uniqueSuffix}'
 
-@description('Function App name. Default: func-spotifyexport-$<uniqueSuffix>')
-param functionAppName string = 'func-spotifyexport-${uniqueSuffix}'
+@description('Function App name. Default: func-spotifyexp-$<uniqueSuffix>')
+param functionAppName string = 'func-spotifyexp-${uniqueSuffix}'
 
-@description('Cosmos DB Account name. Default: cosno-spotifyexport-$<uniqueSuffix>')
-param cosmosAccountName string = 'cosno-spotifyexport-${uniqueSuffix}'
+@description('Cosmos DB Account name. Default: cosno-spotifyexp-$<uniqueSuffix>')
+param cosmosAccountName string = 'cosno-spotifyexp-${uniqueSuffix}'
 
-@description('Key Vault name. Default: kv-spotifyexport-$<uniqueSuffix>')
-param keyVaultName string = 'kv-spotifyexport-${uniqueSuffix}'
+@description('Key Vault name. Default: kv-spotifyexp-$<uniqueSuffix>')
+param keyVaultName string = 'kv-spotifyexp-${uniqueSuffix}'
 
 @description('Value of the Spotify-ClientID Key Vault secret')
 @secure()
@@ -47,15 +47,6 @@ param spotifyClientSecret string
 param spotifyRefreshToken string
 
 
-// Default logging policy for all resources
-var defaultLogOrMetric = {
-  enabled: logsEnabled
-  retentionPolicy: {
-    days: logsEnabled ? 7 : 0
-    enabled: logsEnabled
-  }
-}
-
 // Default Cosmos DB containers
 var cosmosContainerNames = [
   'Following'
@@ -64,15 +55,6 @@ var cosmosContainerNames = [
   'RecentlyPlayed'
 ]
 
-// Resource Group Lock
-resource rgLock 'Microsoft.Authorization/locks@2016-09-01' = {
-  scope: resourceGroup()
-  name: 'DoNotDelete'
-  properties: {
-    level: 'CanNotDelete'
-    notes: 'This lock prevents the accidental deletion of resources'
-  }
-}
 
 // RBAC Role definitions
 @description('Built-in Storage Blob Data Contributor role. See https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-blob-data-contributor')
@@ -90,28 +72,38 @@ resource keyVaultSecretsUserRole 'Microsoft.Authorization/roleDefinitions@2022-0
 // RBAC Role assignments
 @description('Allows Function App Managed Identity to write to Storage Account')
 resource funcMIBlobRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(func.id, st.id, storageBlobContributorRole.id)
-  scope: st
+  name: guid(functionApp.id, storageAccount.id, storageBlobContributorRole.id)
+  scope: storageAccount
   properties: {
     roleDefinitionId: storageBlobContributorRole.id
-    principalId: func.identity.principalId
+    principalId: functionApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
 @description('Allows Function App Managed Identity to use Key Vault Secrets')
 resource funcMIVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(func.id, kv.id, keyVaultSecretsUserRole.id)
-  scope: kv
+  name: guid(functionApp.id, keyVault.id, keyVaultSecretsUserRole.id)
+  scope: keyVault
   properties: {
     roleDefinitionId: keyVaultSecretsUserRole.id
-    principalId: func.identity.principalId
+    principalId: functionApp.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
+// Resource Group Lock
+resource rgLock 'Microsoft.Authorization/locks@2020-05-01' = {
+  scope: resourceGroup()
+  name: 'DoNotDelete'
+  properties: {
+    level: 'CanNotDelete'
+    notes: 'This lock prevents the accidental deletion of resources'
+  }
+}
+
 // Log Analytics Workspace
-resource log 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsWorkspaceName
   location: location
   properties: {
@@ -121,18 +113,24 @@ resource log 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-resource logAnalyticsWorkspaceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+resource logAnalyticsWorkspaceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (logsEnabled) {
   name: 'All Logs and Metrics'
-  scope: log
+  scope: logAnalyticsWorkspace
   properties: {
-    logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
-    metrics: [ union({ categoryGroup: 'allMetrics' }, defaultLogOrMetric) ]
-    workspaceId: log.id
+    logs: [{
+      categoryGroup: 'allLogs'
+      enabled: true
+    }]
+    metrics: [{
+      category: 'allMetrics'
+      enabled: true
+    }]
+    workspaceId: logAnalyticsWorkspace.id
   }
 }
 
 // Application Insights
-resource appi 'Microsoft.Insights/components@2020-02-02' = {
+resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: appInsightsName
   location: location
   kind: 'web'
@@ -146,7 +144,7 @@ resource appi 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // Storage Account
-resource st 'Microsoft.Storage/storageAccounts@2022-05-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
   location: location
   kind: 'StorageV2'
@@ -158,34 +156,29 @@ resource st 'Microsoft.Storage/storageAccounts@2022-05-01' = {
     allowBlobPublicAccess: false
   }
 
-}
-
-resource stBlob 'Microsoft.Storage/storageAccounts/blobServices@2022-05-01' existing = {
-  name: 'default'
-  parent: st
-}
-
-resource stDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: 'All Logs and Metrics'
-  scope: st
-  properties: {
-    metrics: [ union({ categoryGroup: 'allMetrics' }, defaultLogOrMetric) ]
-    workspaceId: log.id
+  resource blobService 'blobServices' existing = {
+    name: 'default'
   }
 }
 
-resource stBlobDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+resource blobServiceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (logsEnabled) {
   name: 'All Logs and Metrics'
-  scope: stBlob
+  scope: storageAccount::blobService
   properties: {
-    logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
-    metrics: [ union({ categoryGroup: 'allMetrics' }, defaultLogOrMetric) ]
-    workspaceId: log.id
+    logs: [{
+      categoryGroup: 'allLogs'
+      enabled: true
+    }]
+    metrics: [{
+      category: 'Transaction'
+      enabled: true
+    }]
+    workspaceId: logAnalyticsWorkspace.id
   }
 }
 
 // App Service Plan
-resource asp 'Microsoft.Web/serverfarms@2022-03-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: appServicePlanName
   location: location
   kind: 'linux'
@@ -198,17 +191,20 @@ resource asp 'Microsoft.Web/serverfarms@2022-03-01' = {
   }
 }
 
-resource aspDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+resource aspDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (logsEnabled) {
   name: 'All Logs and Metrics'
-  scope: asp
+  scope: appServicePlan
   properties: {
-    metrics: [ union({ category: 'AllMetrics' }, defaultLogOrMetric) ]
-    workspaceId: log.id
+    metrics: [{
+      category: 'AllMetrics'
+      enabled: true
+    }]
+    workspaceId: logAnalyticsWorkspace.id
   }
 }
 
 // Function App
-resource func 'Microsoft.Web/sites@2022-03-01' = {
+resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
   name: functionAppName
   location: location
   kind: 'functionapp,linux'
@@ -218,26 +214,26 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
   properties: {
     httpsOnly: true
     reserved: true
-    serverFarmId: asp.id
+    serverFarmId: appServicePlan.id
     keyVaultReferenceIdentity: 'SystemAssigned'
     siteConfig: {
-      linuxFxVersion: 'POWERSHELL|7.2'
+      linuxFxVersion: 'POWERSHELL|7.4'
       appSettings: [
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
-          value: appi.properties.InstrumentationKey
+          value: appInsights.properties.InstrumentationKey
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-          value: appi.properties.ConnectionString
+          value: appInsights.properties.ConnectionString
         }
         {
           name: 'AzureWebJobsStorage'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=StorageAccount-ConnectionString)'
+          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=StorageAccount-ConnectionString)'
         }
         {
           name: 'COSMOS_CONNECTION_STRING'
-          value: cosmosEnabled ? '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=CosmosDB-ConnectionString)' : 'null'
+          value: cosmosEnabled ? '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=CosmosDB-ConnectionString)' : 'null'
         }
         {
           name: 'COSMOS_ENABLED'
@@ -265,15 +261,15 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
         }
         {
           name: 'SPOTIFY_CLIENT_ID'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=Spotify-ClientID)'
+          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=Spotify-ClientID)'
         }
         {
           name: 'SPOTIFY_CLIENT_SECRET'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=Spotify-ClientSecret)'
+          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=Spotify-ClientSecret)'
         }
         {
           name: 'SPOTIFY_REFRESH_TOKEN'
-          value: '@Microsoft.KeyVault(VaultName=${kv.name};SecretName=Spotify-RefreshToken)'
+          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=Spotify-RefreshToken)'
         }
       ]
       alwaysOn: false
@@ -281,18 +277,24 @@ resource func 'Microsoft.Web/sites@2022-03-01' = {
   }
 }
 
-resource funcDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+resource funcDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (logsEnabled) {
   name: 'All Logs and Metrics'
-  scope: func
+  scope: functionApp
   properties: {
-    logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
-    metrics: [ union({ category: 'AllMetrics' }, defaultLogOrMetric) ]
-    workspaceId: log.id
+    logs: [{
+      categoryGroup: 'allLogs'
+      enabled: true
+    }]
+    metrics: [{
+      category: 'AllMetrics'
+      enabled: true
+    }]
+    workspaceId: logAnalyticsWorkspace.id
   }
 }
 
 // Cosmos DB (NoSQL API)
-resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2022-05-15' = if (cosmosEnabled) {
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = if (cosmosEnabled) {
   name: toLower(cosmosAccountName)
   location: location
   properties: {
@@ -307,63 +309,67 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2022-05-15' = if (
       }
     ]
   }
-}
 
-resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-05-15' = if (cosmosEnabled) {
-  parent: cosmosAccount
-  name: 'cosmos-spotifyexport'
-  properties: {
-    resource: {
-      id: 'cosmos-spotifyexport'
+  resource cosmosDatabase 'sqlDatabases' = {
+    name: 'cosmos-spotifyexport'
+    properties: {
+      resource: {
+        id: 'cosmos-spotifyexport'
+      }
+      options: {
+        throughput: 1000
+      }
     }
-    options: {
-      throughput: 1000
-    }
+
+    resource cosmosContainers 'containers' = [for containerName in cosmosContainerNames: {
+      name: containerName
+      properties: {
+        resource: {
+          id: containerName
+          partitionKey: {
+            paths: [
+              '/id'
+            ]
+            kind: 'Hash'
+          }
+          indexingPolicy: {
+            indexingMode: 'consistent'
+            automatic: true
+            includedPaths: [
+              {
+                path: '/*'
+              }
+            ]
+            excludedPaths: [
+              {
+                path: '/_etag/?'
+              }
+            ]
+          }
+        }
+      }
+    }]
   }
 }
 
-resource cosmosContainers 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-05-15' = [for containerName in cosmosContainerNames: if (cosmosEnabled) {
-  parent: cosmosDatabase
-  name: containerName
-  properties: {
-    resource: {
-      id: containerName
-      partitionKey: {
-        paths: [
-          '/id'
-        ]
-        kind: 'Hash'
-      }
-      indexingPolicy: {
-        indexingMode: 'consistent'
-        automatic: true
-        includedPaths: [
-          {
-            path: '/*'
-          }
-        ]
-        excludedPaths: [
-          {
-            path: '/_etag/?'
-          }
-        ]
-      }
-    }
-  }
-}]
-
-resource cosmosDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (cosmosEnabled) {
+resource cosmosDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (cosmosEnabled && logsEnabled) {
   name: 'All Logs and Metrics'
   scope: cosmosAccount
   properties: {
-    logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
-    metrics: [ union({ category: 'AllMetrics' }, defaultLogOrMetric) ]
-    workspaceId: log.id
+    logs: [{
+      categoryGroup: 'allLogs'
+      enabled: true
+    }]
+    metrics: [{
+      category: 'AllMetrics'
+      enabled: true
+    }]
+    workspaceId: logAnalyticsWorkspace.id
   }
 }
 
 // Key Vault
-resource kv 'Microsoft.KeyVault/vaults@2022-07-01' = {
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
   location: location
   properties: {
@@ -380,50 +386,51 @@ resource kv 'Microsoft.KeyVault/vaults@2022-07-01' = {
     softDeleteRetentionInDays: 30
     tenantId: tenant().tenantId
   }
+
+  resource kvSecretClientId 'secrets' = {
+    name: 'Spotify-ClientId'
+    properties: {
+      value: spotifyClientId
+    }
+  }
+  resource kvSecretClientSecret 'secrets' = {
+    name: 'Spotify-ClientSecret'
+    properties: {
+      value: spotifyClientSecret
+    }
+  }
+  resource kvSecretRefreshToken 'secrets' = {
+    name: 'Spotify-RefreshToken'
+    properties: {
+      value: spotifyRefreshToken
+    }
+  }
+  resource kvSecretCosmosCS 'secrets' = if (cosmosEnabled) {
+    name: 'CosmosDB-ConnectionString'
+    properties: {
+      value: cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
+    }
+  }
+  resource kvSecretStorageCS 'secrets' = {
+    name: 'StorageAccount-ConnectionString'
+    properties: {
+      value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
+    }
+  }
 }
 
-resource kvDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+resource kvDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (logsEnabled) {
   name: 'All Logs and Metrics'
-  scope: kv
+  scope: keyVault
   properties: {
-    logs: [ union({ categoryGroup: 'allLogs' }, defaultLogOrMetric) ]
-    metrics: [ union({ category: 'AllMetrics' }, defaultLogOrMetric) ]
-    workspaceId: log.id
-  }
-}
-
-// Key Vault secrets
-resource kvSecretStorageCS 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: '${kv.name}/StorageAccount-ConnectionString'
-  properties: {
-    value: 'DefaultEndpointsProtocol=https;AccountName=${st.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${st.listKeys().keys[0].value}'
-  }
-}
-
-resource kvSecretClientId 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: '${kv.name}/Spotify-ClientId'
-  properties: {
-    value: spotifyClientId
-  }
-}
-
-resource kvSecretClientSecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: '${kv.name}/Spotify-ClientSecret'
-  properties: {
-    value: spotifyClientSecret
-  }
-}
-
-resource kvSecretRefreshToken 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: '${kv.name}/Spotify-RefreshToken'
-  properties: {
-    value: spotifyRefreshToken
-  }
-}
-
-resource kvSecretCosmosCS 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = if (cosmosEnabled) {
-  name: '${kv.name}/CosmosDB-ConnectionString'
-  properties: {
-    value: cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
+    logs: [{
+      categoryGroup: 'allLogs'
+      enabled: true
+    }]
+    metrics: [{
+      category: 'AllMetrics'
+      enabled: true
+    }]
+    workspaceId: logAnalyticsWorkspace.id
   }
 }
