@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "1511358854599977821"
+      "templateHash": "7365241025886747766"
     }
   },
   "parameters": {
@@ -93,6 +93,13 @@
         "description": "Key Vault name. Default: kv-spotifyexp-$<uniqueSuffix>"
       }
     },
+    "keyVaultSecretsEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Switch to enable/disable provisioning of Key Vault Secrets. Default: true"
+      }
+    },
     "spotifyClientId": {
       "type": "securestring",
       "metadata": {
@@ -118,8 +125,7 @@
       "Library",
       "Playlist",
       "RecentlyPlayed"
-    ],
-    "kvSecretsEnabled": false
+    ]
   },
   "resources": [
     {
@@ -175,7 +181,7 @@
       ]
     },
     {
-      "condition": "[variables('kvSecretsEnabled')]",
+      "condition": "[parameters('keyVaultSecretsEnabled')]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2026-02-01",
       "name": "[format('{0}/{1}', parameters('keyVaultName'), 'Spotify-ClientId')]",
@@ -187,7 +193,7 @@
       ]
     },
     {
-      "condition": "[variables('kvSecretsEnabled')]",
+      "condition": "[parameters('keyVaultSecretsEnabled')]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2026-02-01",
       "name": "[format('{0}/{1}', parameters('keyVaultName'), 'Spotify-ClientSecret')]",
@@ -199,7 +205,7 @@
       ]
     },
     {
-      "condition": "[variables('kvSecretsEnabled')]",
+      "condition": "[parameters('keyVaultSecretsEnabled')]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2026-02-01",
       "name": "[format('{0}/{1}', parameters('keyVaultName'), 'Spotify-RefreshToken')]",
@@ -211,7 +217,7 @@
       ]
     },
     {
-      "condition": "[and(parameters('cosmosEnabled'), variables('kvSecretsEnabled'))]",
+      "condition": "[and(parameters('cosmosEnabled'), parameters('keyVaultSecretsEnabled'))]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2026-02-01",
       "name": "[format('{0}/{1}', parameters('keyVaultName'), 'CosmosDB-ConnectionString')]",
@@ -224,7 +230,7 @@
       ]
     },
     {
-      "condition": "[variables('kvSecretsEnabled')]",
+      "condition": "[parameters('keyVaultSecretsEnabled')]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2026-02-01",
       "name": "[format('{0}/{1}', parameters('keyVaultName'), 'StorageAccount-ConnectionString')]",

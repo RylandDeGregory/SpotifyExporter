@@ -34,6 +34,9 @@ param cosmosAccountName string = 'cosno-spotifyexp-${uniqueSuffix}'
 @description('Key Vault name. Default: kv-spotifyexp-$<uniqueSuffix>')
 param keyVaultName string = 'kv-spotifyexp-${uniqueSuffix}'
 
+@description('Switch to enable/disable provisioning of Key Vault Secrets. Default: true')
+param keyVaultSecretsEnabled bool = true
+
 @description('Value of the Spotify-ClientID Key Vault secret')
 @secure()
 param spotifyClientId string
@@ -54,8 +57,6 @@ var cosmosContainerNames = [
   'Playlist'
   'RecentlyPlayed'
 ]
-
-var kvSecretsEnabled = false
 
 // RBAC Role definitions
 @description('Built-in Storage Blob Data Contributor role. See https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-blob-data-contributor')
@@ -385,31 +386,31 @@ resource keyVault 'Microsoft.KeyVault/vaults@2026-02-01' = {
     tenantId: tenant().tenantId
   }
 
-  resource kvSecretClientId 'secrets' = if (kvSecretsEnabled) {
+  resource kvSecretClientId 'secrets' = if (keyVaultSecretsEnabled) {
     name: 'Spotify-ClientId'
     properties: {
       value: spotifyClientId
     }
   }
-  resource kvSecretClientSecret 'secrets' = if (kvSecretsEnabled) {
+  resource kvSecretClientSecret 'secrets' = if (keyVaultSecretsEnabled) {
     name: 'Spotify-ClientSecret'
     properties: {
       value: spotifyClientSecret
     }
   }
-  resource kvSecretRefreshToken 'secrets' = if (kvSecretsEnabled) {
+  resource kvSecretRefreshToken 'secrets' = if (keyVaultSecretsEnabled) {
     name: 'Spotify-RefreshToken'
     properties: {
       value: spotifyRefreshToken
     }
   }
-  resource kvSecretCosmosCS 'secrets' = if (cosmosEnabled && kvSecretsEnabled) {
+  resource kvSecretCosmosCS 'secrets' = if (cosmosEnabled && keyVaultSecretsEnabled) {
     name: 'CosmosDB-ConnectionString'
     properties: {
       value: cosmosAccount!.listConnectionStrings().connectionStrings[0].connectionString
     }
   }
-  resource kvSecretStorageCS 'secrets' = if (kvSecretsEnabled) {
+  resource kvSecretStorageCS 'secrets' = if (keyVaultSecretsEnabled) {
     name: 'StorageAccount-ConnectionString'
     properties: {
       value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
