@@ -49,7 +49,6 @@ param spotifyClientSecret string
 @secure()
 param spotifyRefreshToken string
 
-
 // Default Cosmos DB containers
 var cosmosContainerNames = [
   'Following'
@@ -119,14 +118,18 @@ resource logAnalyticsWorkspaceDiagnosticSettings 'Microsoft.Insights/diagnosticS
   name: 'All Logs and Metrics'
   scope: logAnalyticsWorkspace
   properties: {
-    logs: [{
-      categoryGroup: 'allLogs'
-      enabled: true
-    }]
-    metrics: [{
-      category: 'allMetrics'
-      enabled: true
-    }]
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'allMetrics'
+        enabled: true
+      }
+    ]
     workspaceId: logAnalyticsWorkspace.id
   }
 }
@@ -167,14 +170,18 @@ resource blobServiceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@20
   name: 'All Logs and Metrics'
   scope: storageAccount::blobService
   properties: {
-    logs: [{
-      categoryGroup: 'allLogs'
-      enabled: true
-    }]
-    metrics: [{
-      category: 'Transaction'
-      enabled: true
-    }]
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'Transaction'
+        enabled: true
+      }
+    ]
     workspaceId: logAnalyticsWorkspace.id
   }
 }
@@ -197,10 +204,12 @@ resource aspDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01
   name: 'All Logs and Metrics'
   scope: appServicePlan
   properties: {
-    metrics: [{
-      category: 'AllMetrics'
-      enabled: true
-    }]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
     workspaceId: logAnalyticsWorkspace.id
   }
 }
@@ -235,7 +244,9 @@ resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
         }
         {
           name: 'COSMOS_CONNECTION_STRING'
-          value: cosmosEnabled ? '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=CosmosDB-ConnectionString)' : 'null'
+          value: cosmosEnabled
+            ? '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=CosmosDB-ConnectionString)'
+            : 'null'
         }
         {
           name: 'COSMOS_ENABLED'
@@ -283,14 +294,18 @@ resource funcDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-0
   name: 'All Logs and Metrics'
   scope: functionApp
   properties: {
-    logs: [{
-      categoryGroup: 'allLogs'
-      enabled: true
-    }]
-    metrics: [{
-      category: 'AllMetrics'
-      enabled: true
-    }]
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
     workspaceId: logAnalyticsWorkspace.id
   }
 }
@@ -320,34 +335,36 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2026-03-15' = if (
       }
     }
 
-    resource cosmosContainers 'containers' = [for containerName in cosmosContainerNames: {
-      name: containerName
-      properties: {
-        resource: {
-          id: containerName
-          partitionKey: {
-            paths: [
-              '/id'
-            ]
-            kind: 'Hash'
-          }
-          indexingPolicy: {
-            indexingMode: 'consistent'
-            automatic: true
-            includedPaths: [
-              {
-                path: '/*'
-              }
-            ]
-            excludedPaths: [
-              {
-                path: '/_etag/?'
-              }
-            ]
+    resource cosmosContainers 'containers' = [
+      for containerName in cosmosContainerNames: {
+        name: containerName
+        properties: {
+          resource: {
+            id: containerName
+            partitionKey: {
+              paths: [
+                '/id'
+              ]
+              kind: 'Hash'
+            }
+            indexingPolicy: {
+              indexingMode: 'consistent'
+              automatic: true
+              includedPaths: [
+                {
+                  path: '/*'
+                }
+              ]
+              excludedPaths: [
+                {
+                  path: '/_etag/?'
+                }
+              ]
+            }
           }
         }
       }
-    }]
+    ]
   }
 }
 
@@ -355,14 +372,18 @@ resource cosmosDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05
   name: 'All Logs and Metrics'
   scope: cosmosAccount
   properties: {
-    logs: [{
-      categoryGroup: 'allLogs'
-      enabled: true
-    }]
-    metrics: [{
-      category: 'AllMetrics'
-      enabled: true
-    }]
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
     workspaceId: logAnalyticsWorkspace.id
   }
 }
@@ -422,14 +443,18 @@ resource kvDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-
   name: 'All Logs and Metrics'
   scope: keyVault
   properties: {
-    logs: [{
-      categoryGroup: 'allLogs'
-      enabled: true
-    }]
-    metrics: [{
-      category: 'AllMetrics'
-      enabled: true
-    }]
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
     workspaceId: logAnalyticsWorkspace.id
   }
 }
