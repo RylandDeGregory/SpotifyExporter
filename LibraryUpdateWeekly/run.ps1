@@ -14,13 +14,12 @@ param ($Timer)
 $ErrorActionPreference = 'Stop'
 
 # Spotify API config
-$SpotifyApiUrl = 'https://api.spotify.com/v1'
 $Headers = Get-SpotifyAccessToken
 #endregion Init
 
 #region GetLibrary
 try {
-    $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/"
+    $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri "${env:SPOTIFY_API_URL}/me/"
     $UserDisplayName = $User.display_name
     Write-Information "Process Library for Spotify user [$UserDisplayName]"
 } catch {
@@ -28,7 +27,7 @@ try {
 }
 
 $Response = @{
-    next = "$SpotifyApiUrl/me/tracks?limit=50"
+    next = "${env:SPOTIFY_API_URL}/me/tracks?limit=50"
 }
 $Count = 0
 $UserLibrary = while ($Response.next) {

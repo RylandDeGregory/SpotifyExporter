@@ -14,13 +14,12 @@ param ($Timer)
 $ErrorActionPreference = 'Stop'
 
 # Spotify API config
-$SpotifyApiUrl = 'https://api.spotify.com/v1'
 $Headers = Get-SpotifyAccessToken
 #endregion Init
 
 #region GetPlaybackHistory
 try {
-    $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/"
+    $User = Invoke-RestMethod -Method Get -Headers $Headers -Uri "${env:SPOTIFY_API_URL}/me/"
     $UserDisplayName = $User.display_name
     Write-Information "Process playback history for Spotify user [$UserDisplayName]"
 } catch {
@@ -30,7 +29,7 @@ try {
 try {
     # Get the user's 50 most recently played tracks (50 is an API limitation, which requires higher polling to ensure nothing is missed)
     Write-Information 'Process 50 most recently played tracks'
-    $RecentlyPlayed = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$SpotifyApiUrl/me/player/recently-played?limit=50"
+    $RecentlyPlayed = Invoke-RestMethod -Method Get -Headers $Headers -Uri "${env:SPOTIFY_API_URL}/me/player/recently-played?limit=50"
 } catch {
     Write-Error "Error getting recently played tracks for user [$UserDisplayName]: $_"
 }

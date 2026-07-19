@@ -10,7 +10,24 @@
 # NOTE: any variables defined that are not environment variables will get reset after the first execution
 
 # You can also define functions or aliases that can be referenced in any of your PowerShell functions.
+
+# Spotify API base URL
+$env:SPOTIFY_API_URL = 'https://api.spotify.com/v1'
+
 function Get-SpotifyAccessToken {
+    <#
+        .SYNOPSIS
+            Exchanges application credentials and a user Refresh Token for a short-lived Access Token from the Spotify API OAuth2 server.
+            Returns a hashtable that includes the Authorization header required for accessing the Spotify API.
+        .EXAMPLE
+            Get-SpotifyAccessToken
+        .NOTES
+            Requires that the following environment variables are set:
+            - SPOTIFY_CLIENT_ID
+            - SPOTIFY_CLIENT_SECRET
+            - SPOTIFY_REFRESH_TOKEN
+    #>
+    [OutputType([hashtable])]
     [CmdletBinding()]
     param ()
 
