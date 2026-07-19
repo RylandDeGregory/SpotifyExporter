@@ -55,6 +55,7 @@ var cosmosContainerNames = [
   'RecentlyPlayed'
 ]
 
+var kvSecretsEnabled = false
 
 // RBAC Role definitions
 @description('Built-in Storage Blob Data Contributor role. See https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#storage-blob-data-contributor')
@@ -103,7 +104,7 @@ resource rgLock 'Microsoft.Authorization/locks@2020-05-01' = {
 }
 
 // Log Analytics Workspace
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' = {
   name: logAnalyticsWorkspaceName
   location: location
   properties: {
@@ -144,7 +145,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // Storage Account
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2026-04-01' = {
   name: storageAccountName
   location: location
   kind: 'StorageV2'
@@ -178,7 +179,7 @@ resource blobServiceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@20
 }
 
 // App Service Plan
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+resource appServicePlan 'Microsoft.Web/serverfarms@2025-03-01' = {
   name: appServicePlanName
   location: location
   kind: 'linux'
@@ -204,7 +205,7 @@ resource aspDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01
 }
 
 // Function App
-resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
+resource functionApp 'Microsoft.Web/sites@2025-03-01' = {
   name: functionAppName
   location: location
   kind: 'functionapp,linux'
@@ -217,7 +218,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     serverFarmId: appServicePlan.id
     keyVaultReferenceIdentity: 'SystemAssigned'
     siteConfig: {
-      linuxFxVersion: 'POWERSHELL|7.4'
+      linuxFxVersion: 'POWERSHELL|7.6'
       appSettings: [
         {
           name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
@@ -294,7 +295,7 @@ resource funcDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-0
 }
 
 // Cosmos DB (NoSQL API)
-resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = if (cosmosEnabled) {
+resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2026-03-15' = if (cosmosEnabled) {
   name: toLower(cosmosAccountName)
   location: location
   properties: {
@@ -315,9 +316,6 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = if (
     properties: {
       resource: {
         id: 'cosmos-spotifyexport'
-      }
-      options: {
-        throughput: 1000
       }
     }
 
@@ -369,7 +367,7 @@ resource cosmosDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05
 }
 
 // Key Vault
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+resource keyVault 'Microsoft.KeyVault/vaults@2026-02-01' = {
   name: keyVaultName
   location: location
   properties: {
@@ -387,31 +385,31 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: tenant().tenantId
   }
 
-  resource kvSecretClientId 'secrets' = {
+  resource kvSecretClientId 'secrets' = if (kvSecretsEnabled) {
     name: 'Spotify-ClientId'
     properties: {
       value: spotifyClientId
     }
   }
-  resource kvSecretClientSecret 'secrets' = {
+  resource kvSecretClientSecret 'secrets' = if (kvSecretsEnabled) {
     name: 'Spotify-ClientSecret'
     properties: {
       value: spotifyClientSecret
     }
   }
-  resource kvSecretRefreshToken 'secrets' = {
+  resource kvSecretRefreshToken 'secrets' = if (kvSecretsEnabled) {
     name: 'Spotify-RefreshToken'
     properties: {
       value: spotifyRefreshToken
     }
   }
-  resource kvSecretCosmosCS 'secrets' = if (cosmosEnabled) {
+  resource kvSecretCosmosCS 'secrets' = if (cosmosEnabled && kvSecretsEnabled) {
     name: 'CosmosDB-ConnectionString'
     properties: {
-      value: cosmosAccount.listConnectionStrings().connectionStrings[0].connectionString
+      value: cosmosAccount!.listConnectionStrings().connectionStrings[0].connectionString
     }
   }
-  resource kvSecretStorageCS 'secrets' = {
+  resource kvSecretStorageCS 'secrets' = if (kvSecretsEnabled) {
     name: 'StorageAccount-ConnectionString'
     properties: {
       value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storageAccount.listKeys().keys[0].value}'
