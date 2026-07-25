@@ -1,0 +1,9 @@
+**/.DS_Store
+**/.git
+**/.github
+**/.vscode
+**/local.settings.json
+**/test
+README.md
+auth/
+infra/
