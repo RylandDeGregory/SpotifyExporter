@@ -1,6 +1,14 @@
 {
-    "azureFunctions.deploySubpath": ".",
+    "azureFunctions.deploySubpath": "src/",
     "azureFunctions.projectLanguage": "PowerShell",
     "azureFunctions.projectRuntime": "~4",
-    "debug.internalConsoleOptions": "neverOpen"
+    // This function app is deployed as a container image
+    "azureFunctions.scmDoBuildDuringDeployment": false,
+    "debug.internalConsoleOptions": "neverOpen",
+    "[bicep]": {
+        "editor.formatOnSave": true
+    },
+    "[bicep-params]": {
+        "editor.formatOnSave": true
+    }
 }
