@@ -5,6 +5,9 @@
             "type": "func",
             "label": "func: host start",
             "command": "host start",
+            "options": {
+                "cwd": "${workspaceFolder}/src"
+            },
             "problemMatcher": "$func-powershell-watch",
             "isBackground": true
         }
