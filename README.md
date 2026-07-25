@@ -96,4 +96,4 @@ az deployment group create --resource-group <RESOURCE_GROUP> --template-file inf
 
 ## Contact and Contribute
 
-If you run into any issues with this repo, please open an issue or pull request.
+If you run into any problems with this repo, or if you have any questions, please open an issue.
