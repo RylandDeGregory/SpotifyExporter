@@ -1,6 +1,3 @@
-@description('Resource ID of the subnet allowed to reach the Storage Account.')
-param allowedSubnetId string
-
 @description('The Azure Region to deploy the resources into.')
 param location string
 
@@ -27,14 +24,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2026-04-01' = {
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
     networkAcls: {
-      bypass: 'None'
-      defaultAction: 'Deny'
-      virtualNetworkRules: [
-        {
-          id: allowedSubnetId
-          action: 'Allow'
-        }
-      ]
+      bypass: 'AzureServices'
+      defaultAction: 'Allow'
     }
   }
 

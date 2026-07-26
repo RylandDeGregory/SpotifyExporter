@@ -1,6 +1,3 @@
-@description('Resource ID of the subnet allowed to reach the Key Vault.')
-param allowedSubnetId string
-
 @description('Key Vault name.')
 param keyVaultName string
 
@@ -48,12 +45,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2026-02-01' = {
       // AzureServices bypass allows the Container Apps platform to resolve
       // Key Vault references for secrets.
       bypass: 'AzureServices'
-      defaultAction: 'Deny'
-      virtualNetworkRules: [
-        {
-          id: allowedSubnetId
-        }
-      ]
+      defaultAction: 'Allow'
     }
   }
 
