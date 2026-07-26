@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "9611979414006664697"
+      "templateHash": "162910796009391868"
     }
   },
   "parameters": {
@@ -22,13 +22,6 @@
       "defaultValue": "[format('cae-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
         "description": "Container Apps Environment name. Default: cae-spotifyexp-$<uniqueSuffix>"
-      }
-    },
-    "containerAppSubnetPrefix": {
-      "type": "string",
-      "defaultValue": "10.0.0.0/26",
-      "metadata": {
-        "description": "Address space for the Container Apps infrastructure subnet. Must be /27 or larger. Default: 10.0.0.0/26"
       }
     },
     "containerImage": {
@@ -132,24 +125,9 @@
       "metadata": {
         "description": "A unique string to add as a suffix to all resources. Default: substring(uniqueString(resourceGroup().id), 0, 5)"
       }
-    },
-    "virtualNetworkName": {
-      "type": "string",
-      "defaultValue": "[format('vnet-spotifyexp-{0}', parameters('uniqueSuffix'))]",
-      "metadata": {
-        "description": "Virtual Network name. Default: vnet-spotifyexp-$<uniqueSuffix>"
-      }
-    },
-    "virtualNetworkAddressPrefix": {
-      "type": "string",
-      "defaultValue": "10.0.0.0/24",
-      "metadata": {
-        "description": "Address space for the Virtual Network. Default: 10.0.0.0/24"
-      }
     }
   },
   "variables": {
-    "containerAppSubnetName": "snet-containerapps",
     "cosmosContainerNames": [
       "Following",
       "Library",
@@ -196,9 +174,6 @@
           "functionAppName": {
             "value": "[parameters('functionAppName')]"
           },
-          "infrastructureSubnetId": {
-            "value": "[reference('network').outputs.containerAppSubnetId.value]"
-          },
           "keyVaultUri": {
             "value": "[reference('keyVault').outputs.keyVaultUri.value]"
           },
@@ -237,7 +212,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.45.15.27210",
-              "templateHash": "14698847952713600442"
+              "templateHash": "7709936315444324120"
             }
           },
           "parameters": {
@@ -275,12 +250,6 @@
               "type": "string",
               "metadata": {
                 "description": "Function App name."
-              }
-            },
-            "infrastructureSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Resource ID of the Container Apps infrastructure subnet."
               }
             },
             "keyVaultUri": {
@@ -357,10 +326,6 @@
                     "customerId": "[parameters('logAnalyticsCustomerId')]",
                     "sharedKey": "[parameters('logAnalyticsSharedKey')]"
                   }
-                },
-                "vnetConfiguration": {
-                  "infrastructureSubnetId": "[parameters('infrastructureSubnetId')]",
-                  "internal": false
                 },
                 "workloadProfiles": [
                   {
@@ -534,7 +499,6 @@
         "cosmos",
         "keyVault",
         "monitoring",
-        "network",
         "storage"
       ]
     },
@@ -549,9 +513,6 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "allowedSubnetId": {
-            "value": "[reference('network').outputs.containerAppSubnetId.value]"
-          },
           "containerNames": {
             "value": "[variables('cosmosContainerNames')]"
           },
@@ -578,16 +539,10 @@
             "_generator": {
               "name": "bicep",
               "version": "0.45.15.27210",
-              "templateHash": "2465226171959543650"
+              "templateHash": "2787605995387046089"
             }
           },
           "parameters": {
-            "allowedSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Resource ID of the subnet allowed to reach the Cosmos DB Account."
-              }
-            },
             "containerNames": {
               "type": "array",
               "metadata": {
@@ -693,13 +648,7 @@
                   }
                 ],
                 "disableLocalAuth": true,
-                "isVirtualNetworkFilterEnabled": true,
-                "virtualNetworkRules": [
-                  {
-                    "id": "[parameters('allowedSubnetId')]",
-                    "ignoreMissingVNetServiceEndpoint": false
-                  }
-                ]
+                "isVirtualNetworkFilterEnabled": false
               }
             },
             {
@@ -745,8 +694,7 @@
         }
       },
       "dependsOn": [
-        "monitoring",
-        "network"
+        "monitoring"
       ]
     },
     "keyVault": {
@@ -759,9 +707,6 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "allowedSubnetId": {
-            "value": "[reference('network').outputs.containerAppSubnetId.value]"
-          },
           "keyVaultName": {
             "value": "[parameters('keyVaultName')]"
           },
@@ -794,16 +739,10 @@
             "_generator": {
               "name": "bicep",
               "version": "0.45.15.27210",
-              "templateHash": "7232685282733784920"
+              "templateHash": "1098375370010939866"
             }
           },
           "parameters": {
-            "allowedSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Resource ID of the subnet allowed to reach the Key Vault."
-              }
-            },
             "keyVaultName": {
               "type": "string",
               "metadata": {
@@ -910,12 +849,7 @@
                 "tenantId": "[tenant().tenantId]",
                 "networkAcls": {
                   "bypass": "AzureServices",
-                  "defaultAction": "Deny",
-                  "virtualNetworkRules": [
-                    {
-                      "id": "[parameters('allowedSubnetId')]"
-                    }
-                  ]
+                  "defaultAction": "Allow"
                 }
               }
             },
@@ -962,8 +896,7 @@
         }
       },
       "dependsOn": [
-        "monitoring",
-        "network"
+        "monitoring"
       ]
     },
     "monitoring": {
@@ -1100,142 +1033,6 @@
         }
       }
     },
-    "network": {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "Network",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "containerAppSubnetName": {
-            "value": "[variables('containerAppSubnetName')]"
-          },
-          "containerAppSubnetPrefix": {
-            "value": "[parameters('containerAppSubnetPrefix')]"
-          },
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "virtualNetworkName": {
-            "value": "[parameters('virtualNetworkName')]"
-          },
-          "virtualNetworkAddressPrefix": {
-            "value": "[parameters('virtualNetworkAddressPrefix')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "1622827033223118073"
-            }
-          },
-          "parameters": {
-            "containerAppSubnetName": {
-              "type": "string",
-              "metadata": {
-                "description": "Name of the Container Apps infrastructure subnet."
-              }
-            },
-            "containerAppSubnetPrefix": {
-              "type": "string",
-              "metadata": {
-                "description": "Address space for the Container Apps infrastructure subnet. Must be /27 or larger."
-              }
-            },
-            "location": {
-              "type": "string",
-              "metadata": {
-                "description": "The Azure Region to deploy the resources into."
-              }
-            },
-            "virtualNetworkName": {
-              "type": "string",
-              "metadata": {
-                "description": "Virtual Network name."
-              }
-            },
-            "virtualNetworkAddressPrefix": {
-              "type": "string",
-              "metadata": {
-                "description": "Address space for the Virtual Network."
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2025-07-01",
-              "name": "[parameters('virtualNetworkName')]",
-              "location": "[parameters('location')]",
-              "properties": {
-                "addressSpace": {
-                  "addressPrefixes": [
-                    "[parameters('virtualNetworkAddressPrefix')]"
-                  ]
-                },
-                "subnets": [
-                  {
-                    "name": "[parameters('containerAppSubnetName')]",
-                    "properties": {
-                      "addressPrefix": "[parameters('containerAppSubnetPrefix')]",
-                      "delegations": [
-                        {
-                          "name": "Microsoft.App.environments",
-                          "properties": {
-                            "serviceName": "Microsoft.App/environments"
-                          }
-                        }
-                      ],
-                      "serviceEndpoints": [
-                        {
-                          "service": "Microsoft.Storage",
-                          "locations": [
-                            "[parameters('location')]"
-                          ]
-                        },
-                        {
-                          "service": "Microsoft.AzureCosmosDB",
-                          "locations": [
-                            "[parameters('location')]"
-                          ]
-                        },
-                        {
-                          "service": "Microsoft.KeyVault",
-                          "locations": [
-                            "[parameters('location')]"
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          ],
-          "outputs": {
-            "virtualNetworkId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]"
-            },
-            "virtualNetworkName": {
-              "type": "string",
-              "value": "[parameters('virtualNetworkName')]"
-            },
-            "containerAppSubnetId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('containerAppSubnetName'))]"
-            }
-          }
-        }
-      }
-    },
     "rbac": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
@@ -1353,9 +1150,6 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "allowedSubnetId": {
-            "value": "[reference('network').outputs.containerAppSubnetId.value]"
-          },
           "location": {
             "value": "[parameters('location')]"
           },
@@ -1376,16 +1170,10 @@
             "_generator": {
               "name": "bicep",
               "version": "0.45.15.27210",
-              "templateHash": "5326673785419258537"
+              "templateHash": "7279242146523538151"
             }
           },
           "parameters": {
-            "allowedSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Resource ID of the subnet allowed to reach the Storage Account."
-              }
-            },
             "location": {
               "type": "string",
               "metadata": {
@@ -1428,14 +1216,8 @@
                 "minimumTlsVersion": "TLS1_2",
                 "supportsHttpsTrafficOnly": true,
                 "networkAcls": {
-                  "bypass": "None",
-                  "defaultAction": "Deny",
-                  "virtualNetworkRules": [
-                    {
-                      "id": "[parameters('allowedSubnetId')]",
-                      "action": "Allow"
-                    }
-                  ]
+                  "bypass": "AzureServices",
+                  "defaultAction": "Allow"
                 }
               }
             },
@@ -1478,8 +1260,7 @@
         }
       },
       "dependsOn": [
-        "monitoring",
-        "network"
+        "monitoring"
       ]
     }
   }

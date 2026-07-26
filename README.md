@@ -84,7 +84,6 @@ The infrastructure is defined in [infra/main.bicep](infra/main.bicep), which orc
 | [cosmos.bicep](infra/modules/cosmos.bicep) | (if enabled) Cosmos DB NoSQL account, database, and containers |
 | [keyvault.bicep](infra/modules/keyvault.bicep) | Key Vault and the three Spotify secrets |
 | [monitoring.bicep](infra/modules/monitoring.bicep) | Log Analytics Workspace and Application Insights |
-| [network.bicep](infra/modules/network.bicep) | Virtual Network and delegated Container Apps subnet with service endpoints |
 | [rbac.bicep](infra/modules/rbac.bicep) | Azure RBAC and Cosmos SQL RBAC Role assignments for the Function App managed identity |
 | [storage.bicep](infra/modules/storage.bicep) | Storage Account for `.csv` export and the Functions host storage |
 

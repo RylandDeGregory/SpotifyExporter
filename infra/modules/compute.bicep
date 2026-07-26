@@ -16,9 +16,6 @@ param cosmosEnabled bool
 @description('Function App name.')
 param functionAppName string
 
-@description('Resource ID of the Container Apps infrastructure subnet.')
-param infrastructureSubnetId string
-
 @description('URI of the Key Vault holding the Spotify secrets.')
 param keyVaultUri string
 
@@ -60,10 +57,6 @@ resource containerAppEnv 'Microsoft.App/managedEnvironments@2026-01-01' = {
         customerId: logAnalyticsCustomerId
         sharedKey: logAnalyticsSharedKey
       }
-    }
-    vnetConfiguration: {
-      infrastructureSubnetId: infrastructureSubnetId
-      internal: false
     }
     workloadProfiles: [
       {

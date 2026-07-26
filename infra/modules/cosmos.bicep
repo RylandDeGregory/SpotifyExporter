@@ -1,6 +1,3 @@
-@description('Resource ID of the subnet allowed to reach the Cosmos DB Account.')
-param allowedSubnetId string
-
 @description('Names of the Cosmos DB containers to create.')
 param containerNames array
 
@@ -34,13 +31,7 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2026-03-15' = {
       }
     ]
     disableLocalAuth: true
-    isVirtualNetworkFilterEnabled: true
-    virtualNetworkRules: [
-      {
-        id: allowedSubnetId
-        ignoreMissingVNetServiceEndpoint: false
-      }
-    ]
+    isVirtualNetworkFilterEnabled: false
   }
 
   resource cosmosDatabase 'sqlDatabases' = {

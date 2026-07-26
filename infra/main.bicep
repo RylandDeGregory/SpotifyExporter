@@ -1,9 +1,7 @@
 // ============================================================================
 // SpotifyExporter
 // Azure Functions on Azure Container Apps, deployed as a container image from
-// GitHub Container Registry into an internal Container Apps Environment.
-// Storage, Cosmos DB, and Key Vault are reached over service endpoints
-// to avoid private endpoint cost. All data access is identity-based.
+// GitHub Container Registry. All data access is identity-based.
 // ============================================================================
 
 @description('Application Insights name. Default: appi-spotifyexp-$<uniqueSuffix>')
@@ -11,9 +9,6 @@ param appInsightsName string = 'appi-spotifyexp-${uniqueSuffix}'
 
 @description('Container Apps Environment name. Default: cae-spotifyexp-$<uniqueSuffix>')
 param containerAppEnvName string = 'cae-spotifyexp-${uniqueSuffix}'
-
-@description('Address space for the Container Apps infrastructure subnet. Must be /27 or larger. Default: 10.0.0.0/26')
-param containerAppSubnetPrefix string = '10.0.0.0/26'
 
 @description('Container image published to GitHub Container Registry.')
 param containerImage string = 'ghcr.io/rylanddegregory/spotifyexporter:latest'
@@ -63,13 +58,6 @@ param storageExportEnabled bool = true
 @description('A unique string to add as a suffix to all resources. Default: substring(uniqueString(resourceGroup().id), 0, 5)')
 param uniqueSuffix string = substring(uniqueString(resourceGroup().id), 0, 5)
 
-@description('Virtual Network name. Default: vnet-spotifyexp-$<uniqueSuffix>')
-param virtualNetworkName string = 'vnet-spotifyexp-${uniqueSuffix}'
-
-@description('Address space for the Virtual Network. Default: 10.0.0.0/24')
-param virtualNetworkAddressPrefix string = '10.0.0.0/24'
-
-var containerAppSubnetName = 'snet-containerapps'
 var cosmosContainerNames = [
   'Following'
   'Library'
@@ -101,7 +89,6 @@ module compute 'modules/compute.bicep' = {
     cosmosDocumentEndpoint: cosmosEnabled ? cosmos!.outputs.documentEndpoint : ''
     cosmosEnabled: cosmosEnabled
     functionAppName: functionAppName
-    infrastructureSubnetId: network.outputs.containerAppSubnetId
     keyVaultUri: keyVault.outputs.keyVaultUri
     location: location
     logAnalyticsCustomerId: monitoring.outputs.logAnalyticsCustomerId
@@ -118,7 +105,6 @@ module compute 'modules/compute.bicep' = {
 module cosmos 'modules/cosmos.bicep' = if (cosmosEnabled) {
   name: 'Cosmos'
   params: {
-    allowedSubnetId: network.outputs.containerAppSubnetId
     containerNames: cosmosContainerNames
     databaseName: cosmosDatabaseName
     cosmosAccountName: cosmosAccountName
@@ -131,7 +117,6 @@ module cosmos 'modules/cosmos.bicep' = if (cosmosEnabled) {
 module keyVault 'modules/keyvault.bicep' = {
   name: 'KeyVault'
   params: {
-    allowedSubnetId: network.outputs.containerAppSubnetId
     keyVaultName: keyVaultName
     keyVaultSecretsEnabled: keyVaultSecretsEnabled
     location: location
@@ -153,17 +138,6 @@ module monitoring 'modules/monitoring.bicep' = {
   }
 }
 
-module network 'modules/network.bicep' = {
-  name: 'Network'
-  params: {
-    containerAppSubnetName: containerAppSubnetName
-    containerAppSubnetPrefix: containerAppSubnetPrefix
-    location: location
-    virtualNetworkName: virtualNetworkName
-    virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
-  }
-}
-
 module rbac 'modules/rbac.bicep' = {
   name: 'RBAC'
   params: {
@@ -176,7 +150,6 @@ module rbac 'modules/rbac.bicep' = {
 module storage 'modules/storage.bicep' = {
   name: 'Storage'
   params: {
-    allowedSubnetId: network.outputs.containerAppSubnetId
     location: location
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
     logsEnabled: logsEnabled
