@@ -5,9 +5,12 @@
         This function utilizes a .NET HTTP Listener to parse the Redirect URL containing the Authorization Code
         Alternatively, a user can choose to complete the flow interactively by pasting the Redirect URL into the PowerShell session
         A Spotify Refresh Token is obtained using the Client Authorization Code and the Spotify Developer Application credentials
+    .EXAMPLE
+        Get-SpotifyRefreshToken -ClientId 'abc123' -ClientSecret 'xyz456' -RedirectUri 'http://127.0.0.1:8080/auth'
     .NOTES
         https://developer.spotify.com/dashboard
         https://developer.spotify.com/documentation/general/guides/authorization-guide/#authorization-code-flow
+        https://developer.spotify.com/documentation/web-api/concepts/redirect_uri
     .LINK
         https://ryland.dev
 #>
