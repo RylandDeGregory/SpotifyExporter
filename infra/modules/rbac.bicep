@@ -34,7 +34,7 @@ var roles = [
   {
     // Required for identity-based AzureWebJobsStorage
     name: 'Storage Table Data Contributor'
-    roleId: '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa9'
+    roleId: '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
   }
 ]
 

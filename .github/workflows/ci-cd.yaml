@@ -68,11 +68,8 @@ jobs:
           {
             echo "### Published"
             echo ""
-            echo "| Field | Value |"
-            echo "| --- | --- |"
-            echo "| Digest | \`${{ steps.build.outputs.digest }}\` |"
-            echo ""
-            echo "Tags:"
+            echo "**Digest:** `${{ steps.build.outputs.digest }}`"
+            echo "**Tags:**"
             echo ""
             echo '```'
             echo "${{ steps.meta.outputs.tags }}"

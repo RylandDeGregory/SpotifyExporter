@@ -16,7 +16,7 @@ The **SpotifyExporter** application requires the creation of 3 secrets in order 
 
 Users must obtain a Client ID and Client Secret by registering a [Spotify App](https://developer.spotify.com/documentation/general/guides/app-settings/), as well as an OAuth 2 Refresh token using the [Authorization Code Flow](https://developer.spotify.com/documentation/general/guides/authorization-guide/#authorization-code-flow).
 
-> If you don't know what to use as a Redirect URI, http://localhost:8080/spotifyexporter is a good default.
+> If you don't know what to use as a Redirect URI, `http://127.0.0.1:8080/spotifyexporter` is a good default.
 
 Once you have created your app, use the `Client ID`, `Client Secret`, and `Redirect URI` as the parameters for [Get-SpotifyRefreshToken.ps1](auth/Get-SpotifyRefreshToken.ps1) in the following section.
 
@@ -33,7 +33,7 @@ Once you have created your app, use the `Client ID`, `Client Secret`, and `Redir
     * *Example:*
 
 ```powershell
-./auth/Get-SpotifyRefreshToken.ps1 -ClientId 'c0b51074872b4822b30fe887ce857b47' -ClientSecret '397c93a60153496abbc1458ac1978655' -RedirectUri 'http://localhost:8080/spotifyexporter'
+./auth/Get-SpotifyRefreshToken.ps1 -ClientId 'c0b51074872b4822b30fe887ce857b47' -ClientSecret '397c93a60153496abbc1458ac1978655' -RedirectUri 'http://127.0.0.1:8080/spotifyexporter'
 ```
 
 The users's default web browser will open and request them to sign into Spotify, granting read access to their profile for the Spotify Developer Application they registered.
