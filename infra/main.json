@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.45.15.27210",
-      "templateHash": "18249805776249515929"
+      "templateHash": "9611979414006664697"
     }
   },
   "parameters": {
@@ -237,7 +237,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.45.15.27210",
-              "templateHash": "1689300452421376111"
+              "templateHash": "14698847952713600442"
             }
           },
           "parameters": {
@@ -511,31 +511,6 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvName'))]"
-              ]
-            },
-            {
-              "condition": "[parameters('logsEnabled')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[resourceId('Microsoft.App/containerApps', parameters('functionAppName'))]",
-              "name": "All Logs and Metrics",
-              "properties": {
-                "logs": [
-                  {
-                    "categoryGroup": "allLogs",
-                    "enabled": true
-                  }
-                ],
-                "metrics": [
-                  {
-                    "category": "AllMetrics",
-                    "enabled": true
-                  }
-                ],
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.App/containerApps', parameters('functionAppName'))]"
               ]
             }
           ],
@@ -1286,7 +1261,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.45.15.27210",
-              "templateHash": "13852410471548445758"
+              "templateHash": "10147973154693513867"
             }
           },
           "parameters": {
@@ -1330,7 +1305,7 @@
               },
               {
                 "name": "Storage Table Data Contributor",
-                "roleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa9"
+                "roleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
               }
             ]
           },
