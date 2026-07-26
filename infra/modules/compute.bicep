@@ -210,26 +210,6 @@ resource functionApp 'Microsoft.App/containerApps@2026-01-01' = {
   }
 }
 
-resource funcDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (logsEnabled) {
-  name: 'All Logs and Metrics'
-  scope: functionApp
-  properties: {
-    logs: [
-      {
-        categoryGroup: 'allLogs'
-        enabled: true
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-      }
-    ]
-    workspaceId: logAnalyticsWorkspaceId
-  }
-}
-
 output functionAppId string = functionApp.id
 output functionAppName string = functionApp.name
 output functionAppPrincipalId string = functionApp.identity.principalId
