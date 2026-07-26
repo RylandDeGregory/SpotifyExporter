@@ -66,7 +66,7 @@ MCR does not publish a floating `4-powershell7.6` tag, so the [Dockerfile](Docke
 
 Provide the **Spotify Client Id**, **Spotify Client Secret**, and **Spotify Refresh Token** obtained above as the required parameters for the Azure Resource Manager Custom Deployment.
 
-![Sample Azure Template Deployment](https://github.com/RylandDeGregory/SpotifyExporter/assets/18073815/89fe1d6a-fc57-40a2-b863-9569448be967)
+<img width="707" height="1078" alt="image" src="https://github.com/user-attachments/assets/e4341162-0bf9-4b40-af87-14c65eca428b" />
 
 * To enable diagnostic logging to an Azure Log Analytics Workspace, set the `Logs Enabled` deployment parameter to **true**.
     * *Incurs additional Log Analytics cost*.
