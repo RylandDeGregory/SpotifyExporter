@@ -64,22 +64,14 @@ jobs:
 
       - name: Summary
         if: github.event_name != 'pull_request'
-        env:
-          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
-          RELEASE_REF: ${{ github.ref_name }}
         run: |
           {
             echo "### Published"
             echo ""
-            echo "| Field | Value |"
-            echo "| --- | --- |"
-            echo "| Release | \`${RELEASE_REF}\` |"
-            echo "| Digest | \`${IMAGE_DIGEST}\` |"
+            echo "**Digest:** `${{ steps.build.outputs.digest }}`"
+            echo "**Tags:**"
             echo ""
-            echo "**Image tags**"
-            echo ""
-            while IFS= read -r tag; do
-              [ -n "$tag" ] && echo "- \`${tag}\`"
-            done <<< "${IMAGE_TAGS}"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
