@@ -1,17 +1,7 @@
-// ============================================================================
-// SpotifyExporter
-// Azure Functions on Azure Container Apps, deployed as a container image from
-// GitHub Container Registry. All data access is identity-based.
-// ============================================================================
+// SpotifyExporter on Azure Functions Flex Consumption.
 
 @description('Application Insights name. Default: appi-spotifyexp-$<uniqueSuffix>')
 param appInsightsName string = 'appi-spotifyexp-${uniqueSuffix}'
-
-@description('Container Apps Environment name. Default: cae-spotifyexp-$<uniqueSuffix>')
-param containerAppEnvName string = 'cae-spotifyexp-${uniqueSuffix}'
-
-@description('Container image published to GitHub Container Registry.')
-param containerImage string = 'ghcr.io/rylanddegregory/spotifyexporter:latest'
 
 @description('Cosmos DB Account name. Default: cosno-spotifyexp-$<uniqueSuffix>')
 param cosmosAccountName string = 'cosno-spotifyexp-${uniqueSuffix}'
@@ -21,6 +11,27 @@ param cosmosEnabled bool = false
 
 @description('Function App name. Default: func-spotifyexp-$<uniqueSuffix>')
 param functionAppName string = 'func-spotifyexp-${uniqueSuffix}'
+
+@description('Function App managed identity name. Default: mi-spotifyexp-$<uniqueSuffix>')
+param functionAppManagedIdentityName string = 'mi-spotifyexp-${uniqueSuffix}'
+
+@description('Flex Consumption App Service Plan name. Default: asp-spotifyexp-$<uniqueSuffix>')
+param appServicePlanName string = 'asp-spotifyexp-${uniqueSuffix}'
+
+@description('Flex Consumption integration subnet address prefix.')
+param functionSubnetAddressPrefix string = '10.0.0.0/27'
+
+@description('Flex Consumption integration subnet name. Default: snet-functionAppVirtualNetworkIntegration')
+param functionSubnetName string = 'snet-functionAppVirtualNetworkIntegration'
+
+@description('GitHub branch authorized to deploy the Function App.')
+param githubBranch string
+
+@description('GitHub organization or account that owns the repository.')
+param githubOwner string
+
+@description('GitHub repository authorized to deploy the Function App.')
+param githubRepository string
 
 @description('Key Vault name. Default: kv-spotifyexp-$<uniqueSuffix>')
 param keyVaultName string = 'kv-spotifyexp-${uniqueSuffix}'
@@ -39,15 +50,15 @@ param logsEnabled bool = false
 
 @description('Value of the Spotify-ClientID Key Vault secret')
 @secure()
-param spotifyClientId string
+param spotifyClientId string = ''
 
 @description('Value of the Spotify-ClientSecret Key Vault secret')
 @secure()
-param spotifyClientSecret string
+param spotifyClientSecret string = ''
 
 @description('Value of the Spotify-RefreshToken Key Vault secret')
 @secure()
-param spotifyRefreshToken string
+param spotifyRefreshToken string = ''
 
 @description('Storage Account name. Default: stspotifyexp$<uniqueSuffix>')
 param storageAccountName string = 'stspotifyexp${replace(uniqueSuffix, '-', '')}'
@@ -58,6 +69,12 @@ param storageExportEnabled bool = true
 @description('A unique string to add as a suffix to all resources. Default: substring(uniqueString(resourceGroup().id), 0, 5)')
 param uniqueSuffix string = substring(uniqueString(resourceGroup().id), 0, 5)
 
+@description('Virtual network name. Default: vnet-spotifyexp-$<uniqueSuffix>')
+param virtualNetworkName string = 'vnet-spotifyexp-${uniqueSuffix}'
+
+@description('Virtual network address prefix.')
+param virtualNetworkAddressPrefix string = '10.0.0.0/24'
+
 var cosmosContainerNames = [
   'Following'
   'Library'
@@ -65,10 +82,6 @@ var cosmosContainerNames = [
   'RecentlyPlayed'
 ]
 var cosmosDatabaseName = 'cosmos-spotifyexport'
-
-// Timer-triggered functions only need a single replica.
-var minReplicas = 0
-var maxReplicas = 1
 
 // Resource Group Lock
 resource rgLock 'Microsoft.Authorization/locks@2020-05-01' = {
@@ -84,21 +97,27 @@ module compute 'modules/compute.bicep' = {
   name: 'Compute'
   params: {
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
-    containerAppEnvName: containerAppEnvName
-    containerImage: containerImage
     cosmosDocumentEndpoint: cosmosEnabled ? cosmos!.outputs.documentEndpoint : ''
     cosmosEnabled: cosmosEnabled
+    deploymentStorageContainerUrl: storage.outputs.deploymentStorageContainerUrl
     functionAppName: functionAppName
+    managedIdentityName: functionAppManagedIdentityName
     keyVaultUri: keyVault.outputs.keyVaultUri
     location: location
-    logAnalyticsCustomerId: monitoring.outputs.logAnalyticsCustomerId
-    logAnalyticsSharedKey: monitoring.outputs.logAnalyticsSharedKey
-    logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
-    logsEnabled: logsEnabled
-    maxReplicas: maxReplicas
-    minReplicas: minReplicas
+    appServicePlanName: appServicePlanName
     storageAccountName: storage.outputs.storageAccountName
     storageExportEnabled: storageExportEnabled
+    subnetId: network.outputs.subnetId
+  }
+}
+
+module cicd 'modules/cicd.bicep' = {
+  name: 'CICD'
+  params: {
+    githubBranch: githubBranch
+    githubOwner: githubOwner
+    githubRepository: githubRepository
+    location: location
   }
 }
 
@@ -125,6 +144,7 @@ module keyVault 'modules/keyvault.bicep' = {
     spotifyClientId: spotifyClientId
     spotifyClientSecret: spotifyClientSecret
     spotifyRefreshToken: spotifyRefreshToken
+    subnetId: network.outputs.subnetId
   }
 }
 
@@ -138,12 +158,23 @@ module monitoring 'modules/monitoring.bicep' = {
   }
 }
 
+module network 'modules/network.bicep' = {
+  name: 'Network'
+  params: {
+    location: location
+    subnetAddressPrefix: functionSubnetAddressPrefix
+    subnetName: functionSubnetName
+    virtualNetworkAddressPrefix: virtualNetworkAddressPrefix
+    virtualNetworkName: virtualNetworkName
+  }
+}
+
 module rbac 'modules/rbac.bicep' = {
   name: 'RBAC'
   params: {
     cosmosAccountName: cosmosEnabled ? cosmos!.outputs.cosmosAccountName : ''
     cosmosEnabled: cosmosEnabled
-    functionAppPrincipalId: compute.outputs.functionAppPrincipalId
+    functionAppPrincipalId: compute.outputs.managedIdentityPrincipalId
   }
 }
 
@@ -154,5 +185,9 @@ module storage 'modules/storage.bicep' = {
     logAnalyticsWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
     logsEnabled: logsEnabled
     storageAccountName: storageAccountName
+    subnetId: network.outputs.subnetId
   }
 }
+
+output githubActionsClientId string = cicd.outputs.clientId
+output tenantId string = tenant().tenantId

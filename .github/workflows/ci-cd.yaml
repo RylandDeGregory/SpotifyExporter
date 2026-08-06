@@ -1,79 +1,71 @@
-name: Build and publish container image
+name: Deploy Function App
 
 on:
-  # Releases are cut by pushing a semver tag, for example `git tag v3.0.0 && git push origin v3.0.0`.
   push:
-    tags:
-      - 'v*.*.*'
-  # Pull requests build the image to validate the Dockerfile but do not publish.
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'infra/**'
+      - '.github/workflows/ci-cd.yaml'
   pull_request:
     branches:
       - master
     paths:
       - 'src/**'
-      - 'Dockerfile'
-      - '.dockerignore'
+      - 'infra/**'
       - '.github/workflows/ci-cd.yaml'
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+permissions:
+  contents: read
 
 jobs:
-  build:
+  deploy:
+    name: Deploy to Flex Consumption
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - name: Compile infrastructure
+        run: bicep build infra/main.bicep --outfile infra/main.json
 
-      - name: Sign in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4.5.1
+      - name: Create deployment package
+        working-directory: src
+        run: zip -r ../function-app.zip . -x 'local.settings.json' '*.DS_Store'
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Extract image metadata
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+      - name: Deploy infrastructure incrementally
+        uses: Azure/arm-deploy@a1361c2c2cd398621955b16ca32e01c65ea340f5 # v2.0.0
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=sha,format=long
-            type=ref,event=pr
+          scope: resourcegroup
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          template: infra/main.json
+          parameters: >
+            uniqueSuffix=${{ secrets.AZURE_UNIQUE_SUFFIX }}
+            githubBranch=${{ github.ref_name }}
+            githubOwner=${{ github.repository_owner }}
+            githubRepository=${{ github.event.repository.name }}
+            keyVaultSecretsEnabled=false
+          deploymentMode: Incremental
+          deploymentName: SpotifyExporter-main
+          failOnStdErr: false
 
-      - name: Build and push image
-        id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      - name: Deploy Function App package
+        uses: Azure/functions-action@bc63708cc6539760eea18d8a7de4ce8ef5fdf593 # v1.5.6
         with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Summary
-        if: github.event_name != 'pull_request'
-        env:
-          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
-          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
-        run: |
-          {
-            echo "**Digest:** \`${IMAGE_DIGEST}\`"
-            echo ""
-            echo "**Tags:**"
-            echo ""
-            echo '```'
-            echo "${IMAGE_TAGS}"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          app-name: func-spotifyexp-${{ secrets.AZURE_UNIQUE_SUFFIX }}
+          package: function-app.zip
+          sku: flexconsumption

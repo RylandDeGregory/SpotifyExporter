@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.45.15.27210",
-      "templateHash": "162910796009391868"
+      "version": "0.46.1.21595",
+      "templateHash": "5286708032226968329"
     }
   },
   "parameters": {
@@ -15,20 +15,6 @@
       "defaultValue": "[format('appi-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
         "description": "Application Insights name. Default: appi-spotifyexp-$<uniqueSuffix>"
-      }
-    },
-    "containerAppEnvName": {
-      "type": "string",
-      "defaultValue": "[format('cae-spotifyexp-{0}', parameters('uniqueSuffix'))]",
-      "metadata": {
-        "description": "Container Apps Environment name. Default: cae-spotifyexp-$<uniqueSuffix>"
-      }
-    },
-    "containerImage": {
-      "type": "string",
-      "defaultValue": "ghcr.io/rylanddegregory/spotifyexporter:latest",
-      "metadata": {
-        "description": "Container image published to GitHub Container Registry."
       }
     },
     "cosmosAccountName": {
@@ -50,6 +36,52 @@
       "defaultValue": "[format('func-spotifyexp-{0}', parameters('uniqueSuffix'))]",
       "metadata": {
         "description": "Function App name. Default: func-spotifyexp-$<uniqueSuffix>"
+      }
+    },
+    "functionAppManagedIdentityName": {
+      "type": "string",
+      "defaultValue": "[format('mi-spotifyexp-{0}', parameters('uniqueSuffix'))]",
+      "metadata": {
+        "description": "Function App managed identity name. Default: mi-spotifyexp-$<uniqueSuffix>"
+      }
+    },
+    "appServicePlanName": {
+      "type": "string",
+      "defaultValue": "[format('asp-spotifyexp-{0}', parameters('uniqueSuffix'))]",
+      "metadata": {
+        "description": "Flex Consumption App Service Plan name. Default: asp-spotifyexp-$<uniqueSuffix>"
+      }
+    },
+    "functionSubnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/27",
+      "metadata": {
+        "description": "Flex Consumption integration subnet address prefix."
+      }
+    },
+    "functionSubnetName": {
+      "type": "string",
+      "defaultValue": "snet-functionAppVirtualNetworkIntegration",
+      "metadata": {
+        "description": "Flex Consumption integration subnet name. Default: snet-functionAppVirtualNetworkIntegration"
+      }
+    },
+    "githubBranch": {
+      "type": "string",
+      "metadata": {
+        "description": "GitHub branch authorized to deploy the Function App."
+      }
+    },
+    "githubOwner": {
+      "type": "string",
+      "metadata": {
+        "description": "GitHub organization or account that owns the repository."
+      }
+    },
+    "githubRepository": {
+      "type": "string",
+      "metadata": {
+        "description": "GitHub repository authorized to deploy the Function App."
       }
     },
     "keyVaultName": {
@@ -89,18 +121,21 @@
     },
     "spotifyClientId": {
       "type": "securestring",
+      "defaultValue": "",
       "metadata": {
         "description": "Value of the Spotify-ClientID Key Vault secret"
       }
     },
     "spotifyClientSecret": {
       "type": "securestring",
+      "defaultValue": "",
       "metadata": {
         "description": "Value of the Spotify-ClientSecret Key Vault secret"
       }
     },
     "spotifyRefreshToken": {
       "type": "securestring",
+      "defaultValue": "",
       "metadata": {
         "description": "Value of the Spotify-RefreshToken Key Vault secret"
       }
@@ -125,6 +160,20 @@
       "metadata": {
         "description": "A unique string to add as a suffix to all resources. Default: substring(uniqueString(resourceGroup().id), 0, 5)"
       }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "defaultValue": "[format('vnet-spotifyexp-{0}', parameters('uniqueSuffix'))]",
+      "metadata": {
+        "description": "Virtual network name. Default: vnet-spotifyexp-$<uniqueSuffix>"
+      }
+    },
+    "virtualNetworkAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "Virtual network address prefix."
+      }
     }
   },
   "variables": {
@@ -134,9 +183,7 @@
       "Playlist",
       "RecentlyPlayed"
     ],
-    "cosmosDatabaseName": "cosmos-spotifyexport",
-    "minReplicas": 0,
-    "maxReplicas": 1
+    "cosmosDatabaseName": "cosmos-spotifyexport"
   },
   "resources": {
     "rgLock": {
@@ -161,18 +208,18 @@
           "appInsightsConnectionString": {
             "value": "[reference('monitoring').outputs.appInsightsConnectionString.value]"
           },
-          "containerAppEnvName": {
-            "value": "[parameters('containerAppEnvName')]"
-          },
-          "containerImage": {
-            "value": "[parameters('containerImage')]"
-          },
           "cosmosDocumentEndpoint": "[if(parameters('cosmosEnabled'), createObject('value', reference('cosmos').outputs.documentEndpoint.value), createObject('value', ''))]",
           "cosmosEnabled": {
             "value": "[parameters('cosmosEnabled')]"
           },
+          "deploymentStorageContainerUrl": {
+            "value": "[reference('storage').outputs.deploymentStorageContainerUrl.value]"
+          },
           "functionAppName": {
             "value": "[parameters('functionAppName')]"
+          },
+          "managedIdentityName": {
+            "value": "[parameters('functionAppManagedIdentityName')]"
           },
           "keyVaultUri": {
             "value": "[reference('keyVault').outputs.keyVaultUri.value]"
@@ -180,29 +227,17 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "logAnalyticsCustomerId": {
-            "value": "[reference('monitoring').outputs.logAnalyticsCustomerId.value]"
-          },
-          "logAnalyticsSharedKey": {
-            "value": "[listOutputsWithSecureValues('monitoring', '2025-04-01').logAnalyticsSharedKey]"
-          },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference('monitoring').outputs.logAnalyticsWorkspaceId.value]"
-          },
-          "logsEnabled": {
-            "value": "[parameters('logsEnabled')]"
-          },
-          "maxReplicas": {
-            "value": "[variables('maxReplicas')]"
-          },
-          "minReplicas": {
-            "value": "[variables('minReplicas')]"
+          "appServicePlanName": {
+            "value": "[parameters('appServicePlanName')]"
           },
           "storageAccountName": {
             "value": "[reference('storage').outputs.storageAccountName.value]"
           },
           "storageExportEnabled": {
             "value": "[parameters('storageExportEnabled')]"
+          },
+          "subnetId": {
+            "value": "[reference('network').outputs.subnetId.value]"
           }
         },
         "template": {
@@ -211,8 +246,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "7709936315444324120"
+              "version": "0.46.1.21595",
+              "templateHash": "10590073018080957513"
             }
           },
           "parameters": {
@@ -222,16 +257,10 @@
                 "description": "Application Insights connection string."
               }
             },
-            "containerAppEnvName": {
+            "appServicePlanName": {
               "type": "string",
               "metadata": {
-                "description": "Container Apps Environment name."
-              }
-            },
-            "containerImage": {
-              "type": "string",
-              "metadata": {
-                "description": "Container image published to GitHub Container Registry."
+                "description": "Flex Consumption plan name."
               }
             },
             "cosmosDocumentEndpoint": {
@@ -246,10 +275,29 @@
                 "description": "Switch to enable/disable exporting to a Cosmos DB NoSQL Account."
               }
             },
+            "deploymentStorageContainerUrl": {
+              "type": "string",
+              "metadata": {
+                "description": "Blob container URL used by Flex Consumption One Deploy."
+              }
+            },
             "functionAppName": {
               "type": "string",
               "metadata": {
                 "description": "Function App name."
+              }
+            },
+            "instanceMemoryMB": {
+              "type": "int",
+              "defaultValue": 512,
+              "allowedValues": [
+                512,
+                1024,
+                2048,
+                4096
+              ],
+              "metadata": {
+                "description": "Memory allocated to each Flex Consumption instance in MB."
               }
             },
             "keyVaultUri": {
@@ -264,40 +312,19 @@
                 "description": "The Azure Region to deploy the resources into."
               }
             },
-            "logAnalyticsCustomerId": {
+            "managedIdentityName": {
               "type": "string",
               "metadata": {
-                "description": "Customer ID (workspace GUID) of the Log Analytics Workspace."
+                "description": "Function App managed identity name."
               }
             },
-            "logAnalyticsSharedKey": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Primary shared key of the Log Analytics Workspace."
-              }
-            },
-            "logAnalyticsWorkspaceId": {
-              "type": "string",
-              "metadata": {
-                "description": "Resource ID of the Log Analytics Workspace for diagnostics."
-              }
-            },
-            "logsEnabled": {
-              "type": "bool",
-              "metadata": {
-                "description": "Switch to enable/disable DiagnosticSettings for the resources."
-              }
-            },
-            "maxReplicas": {
+            "maximumInstanceCount": {
               "type": "int",
+              "defaultValue": 5,
+              "minValue": 1,
+              "maxValue": 1000,
               "metadata": {
-                "description": "Maximum number of replicas."
-              }
-            },
-            "minReplicas": {
-              "type": "int",
-              "metadata": {
-                "description": "Minimum number of replicas."
+                "description": "Maximum Flex Consumption scale-out instance count."
               }
             },
             "storageAccountName": {
@@ -311,186 +338,147 @@
               "metadata": {
                 "description": "Switch to enable/disable exporting CSVs to Azure Blob Storage."
               }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the delegated Flex Consumption integration subnet."
+              }
             }
           },
           "resources": [
             {
-              "type": "Microsoft.App/managedEnvironments",
-              "apiVersion": "2026-01-01",
-              "name": "[parameters('containerAppEnvName')]",
-              "location": "[parameters('location')]",
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('functionAppName'), 'appsettings')]",
               "properties": {
-                "appLogsConfiguration": {
-                  "destination": "log-analytics",
-                  "logAnalyticsConfiguration": {
-                    "customerId": "[parameters('logAnalyticsCustomerId')]",
-                    "sharedKey": "[parameters('logAnalyticsSharedKey')]"
-                  }
-                },
-                "workloadProfiles": [
-                  {
-                    "name": "Consumption",
-                    "workloadProfileType": "Consumption"
-                  }
-                ],
-                "zoneRedundant": false
-              }
-            },
-            {
-              "condition": "[parameters('logsEnabled')]",
-              "type": "Microsoft.Insights/diagnosticSettings",
-              "apiVersion": "2021-05-01-preview",
-              "scope": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvName'))]",
-              "name": "All Logs and Metrics",
-              "properties": {
-                "logs": [
-                  {
-                    "categoryGroup": "allLogs",
-                    "enabled": true
-                  }
-                ],
-                "metrics": [
-                  {
-                    "category": "AllMetrics",
-                    "enabled": true
-                  }
-                ],
-                "workspaceId": "[parameters('logAnalyticsWorkspaceId')]"
+                "APPLICATIONINSIGHTS_AUTHENTICATION_STRING": "[format('ClientId={0};Authorization=AAD', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2023-01-31').clientId)]",
+                "APPLICATIONINSIGHTS_CONNECTION_STRING": "[parameters('appInsightsConnectionString')]",
+                "AzureWebJobsStorage__accountName": "[parameters('storageAccountName')]",
+                "AzureWebJobsStorage__clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2023-01-31').clientId]",
+                "AzureWebJobsStorage__credential": "managedidentity",
+                "COSMOS_CONNECTION_STRING__accountEndpoint": "[if(parameters('cosmosEnabled'), parameters('cosmosDocumentEndpoint'), '')]",
+                "COSMOS_CONNECTION_STRING__clientId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2023-01-31').clientId]",
+                "COSMOS_CONNECTION_STRING__credential": "managedidentity",
+                "COSMOS_ENABLED": "[format('{0}', parameters('cosmosEnabled'))]",
+                "FUNCTIONS_EXTENSION_VERSION": "~4",
+                "PLAYLIST_TYPE": "User",
+                "SPOTIFY_CLIENT_ID": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/Spotify-ClientId/)', parameters('keyVaultUri'))]",
+                "SPOTIFY_CLIENT_SECRET": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/Spotify-ClientSecret/)', parameters('keyVaultUri'))]",
+                "SPOTIFY_REFRESH_TOKEN": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/Spotify-RefreshToken/)', parameters('keyVaultUri'))]",
+                "STORAGE_ENABLED": "[format('{0}', parameters('storageExportEnabled'))]"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvName'))]"
+                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
               ]
             },
             {
-              "type": "Microsoft.App/containerApps",
-              "apiVersion": "2026-01-01",
-              "name": "[parameters('functionAppName')]",
+              "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('functionAppName'), 'ftp')]",
+              "properties": {
+                "allow": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('functionAppName'), 'scm')]",
+              "properties": {
+                "allow": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('appServicePlanName')]",
               "location": "[parameters('location')]",
               "kind": "functionapp",
-              "identity": {
-                "type": "SystemAssigned"
+              "sku": {
+                "name": "FC1",
+                "tier": "FlexConsumption"
               },
               "properties": {
-                "environmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvName'))]",
-                "workloadProfileName": "Consumption",
-                "configuration": {
-                  "activeRevisionsMode": "Single",
-                  "ingress": {
-                    "external": false,
-                    "targetPort": 80,
-                    "allowInsecure": false,
-                    "transport": "auto"
-                  },
-                  "secrets": [
-                    {
-                      "name": "spotify-client-id",
-                      "keyVaultUrl": "[format('{0}secrets/Spotify-ClientId', parameters('keyVaultUri'))]",
-                      "identity": "system"
-                    },
-                    {
-                      "name": "spotify-client-secret",
-                      "keyVaultUrl": "[format('{0}secrets/Spotify-ClientSecret', parameters('keyVaultUri'))]",
-                      "identity": "system"
-                    },
-                    {
-                      "name": "spotify-refresh-token",
-                      "keyVaultUrl": "[format('{0}secrets/Spotify-RefreshToken', parameters('keyVaultUri'))]",
-                      "identity": "system"
-                    }
-                  ]
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[parameters('managedIdentityName')]",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('functionAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "functionapp,linux",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')))]": {}
+                }
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "httpsOnly": true,
+                "keyVaultReferenceIdentity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]",
+                "virtualNetworkSubnetId": "[parameters('subnetId')]",
+                "siteConfig": {
+                  "minTlsVersion": "1.2",
+                  "vnetRouteAllEnabled": true
                 },
-                "template": {
-                  "containers": [
-                    {
-                      "name": "spotifyexporter",
-                      "image": "[parameters('containerImage')]",
-                      "resources": {
-                        "cpu": "[json('0.5')]",
-                        "memory": "1Gi"
-                      },
-                      "env": [
-                        {
-                          "name": "APPLICATIONINSIGHTS_AUTHENTICATION_STRING",
-                          "value": "Authorization=AAD"
-                        },
-                        {
-                          "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                          "value": "[parameters('appInsightsConnectionString')]"
-                        },
-                        {
-                          "name": "AzureWebJobsStorage__accountName",
-                          "value": "[parameters('storageAccountName')]"
-                        },
-                        {
-                          "name": "AzureWebJobsStorage__credential",
-                          "value": "managedidentity"
-                        },
-                        {
-                          "name": "FUNCTIONS_EXTENSION_VERSION",
-                          "value": "~4"
-                        },
-                        {
-                          "name": "FUNCTIONS_WORKER_RUNTIME",
-                          "value": "powershell"
-                        },
-                        {
-                          "name": "COSMOS_CONNECTION_STRING__accountEndpoint",
-                          "value": "[if(parameters('cosmosEnabled'), parameters('cosmosDocumentEndpoint'), '')]"
-                        },
-                        {
-                          "name": "COSMOS_CONNECTION_STRING__credential",
-                          "value": "managedidentity"
-                        },
-                        {
-                          "name": "COSMOS_ENABLED",
-                          "value": "[format('{0}', parameters('cosmosEnabled'))]"
-                        },
-                        {
-                          "name": "STORAGE_ENABLED",
-                          "value": "[format('{0}', parameters('storageExportEnabled'))]"
-                        },
-                        {
-                          "name": "PLAYLIST_TYPE",
-                          "value": "User"
-                        },
-                        {
-                          "name": "SPOTIFY_CLIENT_ID",
-                          "secretRef": "spotify-client-id"
-                        },
-                        {
-                          "name": "SPOTIFY_CLIENT_SECRET",
-                          "secretRef": "spotify-client-secret"
-                        },
-                        {
-                          "name": "SPOTIFY_REFRESH_TOKEN",
-                          "secretRef": "spotify-refresh-token"
-                        }
-                      ]
+                "functionAppConfig": {
+                  "deployment": {
+                    "storage": {
+                      "type": "blobContainer",
+                      "value": "[parameters('deploymentStorageContainerUrl')]",
+                      "authentication": {
+                        "type": "UserAssignedIdentity",
+                        "userAssignedIdentityResourceId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+                      }
                     }
-                  ],
-                  "scale": {
-                    "minReplicas": "[parameters('minReplicas')]",
-                    "maxReplicas": "[parameters('maxReplicas')]"
+                  },
+                  "scaleAndConcurrency": {
+                    "maximumInstanceCount": "[parameters('maximumInstanceCount')]",
+                    "instanceMemoryMB": "[parameters('instanceMemoryMB')]"
+                  },
+                  "runtime": {
+                    "name": "powershell",
+                    "version": "7.6"
                   }
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvName'))]"
+                "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
               ]
             }
           ],
           "outputs": {
             "functionAppId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.App/containerApps', parameters('functionAppName'))]"
+              "value": "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
             },
             "functionAppName": {
               "type": "string",
               "value": "[parameters('functionAppName')]"
             },
-            "functionAppPrincipalId": {
+            "managedIdentityClientId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('functionAppName')), '2026-01-01', 'full').identity.principalId]"
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2023-01-31').clientId]"
+            },
+            "managedIdentityPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2023-01-31').principalId]"
             }
           }
         }
@@ -499,8 +487,131 @@
         "cosmos",
         "keyVault",
         "monitoring",
+        "network",
         "storage"
       ]
+    },
+    "cicd": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "CICD",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "githubBranch": {
+            "value": "[parameters('githubBranch')]"
+          },
+          "githubOwner": {
+            "value": "[parameters('githubOwner')]"
+          },
+          "githubRepository": {
+            "value": "[parameters('githubRepository')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "8564756284269804960"
+            }
+          },
+          "parameters": {
+            "githubBranch": {
+              "type": "string",
+              "metadata": {
+                "description": "GitHub branch authorized to deploy the Function App."
+              }
+            },
+            "githubOwner": {
+              "type": "string",
+              "metadata": {
+                "description": "GitHub organization or account that owns the repository."
+              }
+            },
+            "githubRepository": {
+              "type": "string",
+              "metadata": {
+                "description": "GitHub repository authorized to deploy the Function App."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure Region to deploy the resources into."
+              }
+            }
+          },
+          "variables": {
+            "githubSubject": "[format('repo:{0}/{1}:ref:refs/heads/{2}', parameters('githubOwner'), parameters('githubRepository'), parameters('githubBranch'))]",
+            "contributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+            "rbacAdministratorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'f58310d9-a9f6-439a-9e8d-f62e7b41a168')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials",
+              "apiVersion": "2024-11-30",
+              "name": "[format('{0}/{1}', 'mi-github-spotifyexport', format('github-{0}', parameters('githubBranch')))]",
+              "properties": {
+                "audiences": [
+                  "api://AzureADTokenExchange"
+                ],
+                "issuer": "https://token.actions.githubusercontent.com",
+                "subject": "[variables('githubSubject')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport')]"
+              ]
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2024-11-30",
+              "name": "mi-github-spotifyexport",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), resourceGroup().id, variables('contributorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('contributorRoleId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), '2024-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), resourceGroup().id, variables('rbacAdministratorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('rbacAdministratorRoleId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), '2024-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "clientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), '2024-11-30').clientId]"
+            }
+          }
+        }
+      }
     },
     "cosmos": {
       "condition": "[parameters('cosmosEnabled')]",
@@ -538,8 +649,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "2787605995387046089"
+              "version": "0.46.1.21595",
+              "templateHash": "4518849137070754409"
             }
           },
           "parameters": {
@@ -730,6 +841,9 @@
           },
           "spotifyRefreshToken": {
             "value": "[parameters('spotifyRefreshToken')]"
+          },
+          "subnetId": {
+            "value": "[reference('network').outputs.subnetId.value]"
           }
         },
         "template": {
@@ -738,8 +852,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "1098375370010939866"
+              "version": "0.46.1.21595",
+              "templateHash": "5278345260899267869"
             }
           },
           "parameters": {
@@ -789,6 +903,12 @@
               "type": "securestring",
               "metadata": {
                 "description": "Value of the Spotify-RefreshToken Key Vault secret"
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Function App integration subnet allowed through the Key Vault firewall."
               }
             }
           },
@@ -848,8 +968,14 @@
                 "softDeleteRetentionInDays": 30,
                 "tenantId": "[tenant().tenantId]",
                 "networkAcls": {
-                  "bypass": "AzureServices",
-                  "defaultAction": "Allow"
+                  "bypass": "None",
+                  "defaultAction": "Deny",
+                  "virtualNetworkRules": [
+                    {
+                      "id": "[parameters('subnetId')]",
+                      "ignoreMissingVnetServiceEndpoint": false
+                    }
+                  ]
                 }
               }
             },
@@ -896,7 +1022,8 @@
         }
       },
       "dependsOn": [
-        "monitoring"
+        "monitoring",
+        "network"
       ]
     },
     "monitoring": {
@@ -929,8 +1056,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "10120656164960245158"
+              "version": "0.46.1.21595",
+              "templateHash": "3148930402995935411"
             }
           },
           "parameters": {
@@ -1033,6 +1160,125 @@
         }
       }
     },
+    "network": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "Network",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "subnetAddressPrefix": {
+            "value": "[parameters('functionSubnetAddressPrefix')]"
+          },
+          "subnetName": {
+            "value": "[parameters('functionSubnetName')]"
+          },
+          "virtualNetworkAddressPrefix": {
+            "value": "[parameters('virtualNetworkAddressPrefix')]"
+          },
+          "virtualNetworkName": {
+            "value": "[parameters('virtualNetworkName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "6112807534379893648"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure Region to deploy the resources into."
+              }
+            },
+            "subnetAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Address prefix of the subnet delegated to Flex Consumption."
+              }
+            },
+            "subnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the subnet delegated to Flex Consumption."
+              }
+            },
+            "virtualNetworkAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Address prefix of the virtual network used by the Function App."
+              }
+            },
+            "virtualNetworkName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the virtual network used by the Function App."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-05-01",
+              "name": "[parameters('virtualNetworkName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('virtualNetworkAddressPrefix')]"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-05-01",
+              "name": "[format('{0}/{1}', parameters('virtualNetworkName'), parameters('subnetName'))]",
+              "properties": {
+                "addressPrefix": "[parameters('subnetAddressPrefix')]",
+                "delegations": [
+                  {
+                    "name": "flex-consumption",
+                    "properties": {
+                      "serviceName": "Microsoft.App/environments"
+                    }
+                  }
+                ],
+                "serviceEndpoints": [
+                  {
+                    "service": "Microsoft.KeyVault"
+                  },
+                  {
+                    "service": "Microsoft.Storage"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "subnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('subnetName'))]"
+            }
+          }
+        }
+      }
+    },
     "rbac": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
@@ -1048,7 +1294,7 @@
             "value": "[parameters('cosmosEnabled')]"
           },
           "functionAppPrincipalId": {
-            "value": "[reference('compute').outputs.functionAppPrincipalId.value]"
+            "value": "[reference('compute').outputs.managedIdentityPrincipalId.value]"
           }
         },
         "template": {
@@ -1057,8 +1303,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "10147973154693513867"
+              "version": "0.46.1.21595",
+              "templateHash": "4569494450009619838"
             }
           },
           "parameters": {
@@ -1161,6 +1407,9 @@
           },
           "storageAccountName": {
             "value": "[parameters('storageAccountName')]"
+          },
+          "subnetId": {
+            "value": "[reference('network').outputs.subnetId.value]"
           }
         },
         "template": {
@@ -1169,8 +1418,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "7279242146523538151"
+              "version": "0.46.1.21595",
+              "templateHash": "11347160236114579207"
             }
           },
           "parameters": {
@@ -1192,6 +1441,12 @@
                 "description": "Switch to enable/disable DiagnosticSettings for the resources."
               }
             },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Function App integration subnet allowed through the storage firewall."
+              }
+            },
             "storageAccountName": {
               "type": "string",
               "metadata": {
@@ -1199,7 +1454,30 @@
               }
             }
           },
+          "variables": {
+            "deploymentStorageContainerName": "app-package"
+          },
           "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2026-04-01",
+              "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', variables('deploymentStorageContainerName'))]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2026-04-01",
+              "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
             {
               "type": "Microsoft.Storage/storageAccounts",
               "apiVersion": "2026-04-01",
@@ -1216,8 +1494,14 @@
                 "minimumTlsVersion": "TLS1_2",
                 "supportsHttpsTrafficOnly": true,
                 "networkAcls": {
-                  "bypass": "AzureServices",
-                  "defaultAction": "Allow"
+                  "bypass": "None",
+                  "defaultAction": "Deny",
+                  "virtualNetworkRules": [
+                    {
+                      "action": "Allow",
+                      "id": "[parameters('subnetId')]"
+                    }
+                  ]
                 }
               }
             },
@@ -1243,7 +1527,7 @@
                 "workspaceId": "[parameters('logAnalyticsWorkspaceId')]"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]"
               ]
             }
           ],
@@ -1255,13 +1539,28 @@
             "storageAccountName": {
               "type": "string",
               "value": "[parameters('storageAccountName')]"
+            },
+            "deploymentStorageContainerUrl": {
+              "type": "string",
+              "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2026-04-01').primaryEndpoints.blob, variables('deploymentStorageContainerName'))]"
             }
           }
         }
       },
       "dependsOn": [
-        "monitoring"
+        "monitoring",
+        "network"
       ]
+    }
+  },
+  "outputs": {
+    "githubActionsClientId": {
+      "type": "string",
+      "value": "[reference('cicd').outputs.clientId.value]"
+    },
+    "tenantId": {
+      "type": "string",
+      "value": "[tenant().tenantId]"
     }
   }
 }

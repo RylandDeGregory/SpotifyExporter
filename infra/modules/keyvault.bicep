@@ -25,6 +25,9 @@ param spotifyClientSecret string
 @secure()
 param spotifyRefreshToken string
 
+@description('Resource ID of the Function App integration subnet allowed through the Key Vault firewall.')
+param subnetId string
+
 resource keyVault 'Microsoft.KeyVault/vaults@2026-02-01' = {
   name: keyVaultName
   location: location
@@ -42,10 +45,14 @@ resource keyVault 'Microsoft.KeyVault/vaults@2026-02-01' = {
     softDeleteRetentionInDays: 30
     tenantId: tenant().tenantId
     networkAcls: {
-      // AzureServices bypass allows the Container Apps platform to resolve
-      // Key Vault references for secrets.
-      bypass: 'AzureServices'
-      defaultAction: 'Allow'
+      bypass: 'None'
+      defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          id: subnetId
+          ignoreMissingVnetServiceEndpoint: false
+        }
+      ]
     }
   }
 
