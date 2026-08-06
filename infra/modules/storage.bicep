@@ -7,8 +7,13 @@ param logAnalyticsWorkspaceId string
 @description('Switch to enable/disable DiagnosticSettings for the resources.')
 param logsEnabled bool
 
+@description('Resource ID of the Function App integration subnet allowed through the storage firewall.')
+param subnetId string
+
 @description('Storage Account name.')
 param storageAccountName string
+
+var deploymentStorageContainerName = 'app-package'
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2026-04-01' = {
   name: storageAccountName
@@ -24,13 +29,27 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2026-04-01' = {
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
     networkAcls: {
-      bypass: 'AzureServices'
-      defaultAction: 'Allow'
+      bypass: 'None'
+      defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          action: 'Allow'
+          id: subnetId
+        }
+      ]
     }
   }
 
-  resource blobService 'blobServices' existing = {
+  resource blobService 'blobServices' = {
     name: 'default'
+    properties: {}
+
+    resource deploymentContainer 'containers' = {
+      name: deploymentStorageContainerName
+      properties: {
+        publicAccess: 'None'
+      }
+    }
   }
 }
 
@@ -56,3 +75,4 @@ resource blobServiceDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@20
 
 output storageAccountId string = storageAccount.id
 output storageAccountName string = storageAccount.name
+output deploymentStorageContainerUrl string = '${storageAccount.properties.primaryEndpoints.blob}${deploymentStorageContainerName}'
