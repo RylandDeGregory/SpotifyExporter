@@ -8,13 +8,6 @@ on:
       - 'src/**'
       - 'infra/**'
       - '.github/workflows/ci-cd.yaml'
-  pull_request:
-    branches:
-      - master
-    paths:
-      - 'src/**'
-      - 'infra/**'
-      - '.github/workflows/ci-cd.yaml'
   workflow_dispatch:
 
 permissions:
@@ -23,7 +16,6 @@ permissions:
 jobs:
   deploy:
     name: Deploy to Flex Consumption
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
