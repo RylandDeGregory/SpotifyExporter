@@ -11,8 +11,7 @@ param githubRepository string
 param location string
 
 var githubSubject = 'repo:${githubOwner}/${githubRepository}:ref:refs/heads/${githubBranch}'
-var contributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-var rbacAdministratorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'f58310d9-a9f6-439a-9e8d-f62e7b41a168')
+var ownerRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8e3af657-a8ff-443c-a75c-2fe8c4bcb635')
 
 resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' = {
   name: 'mi-github-spotifyexport'
@@ -31,20 +30,10 @@ resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@20
 }
 
 resource infrastructureDeploymentRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(deploymentIdentity.id, resourceGroup().id, contributorRoleId)
+  name: guid(deploymentIdentity.id, resourceGroup().id, ownerRoleId)
   scope: resourceGroup()
   properties: {
-    roleDefinitionId: contributorRoleId
-    principalId: deploymentIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource infrastructureRbacRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(deploymentIdentity.id, resourceGroup().id, rbacAdministratorRoleId)
-  scope: resourceGroup()
-  properties: {
-    roleDefinitionId: rbacAdministratorRoleId
+    roleDefinitionId: ownerRoleId
     principalId: deploymentIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
