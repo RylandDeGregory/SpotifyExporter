@@ -50,7 +50,7 @@ Flex Consumption stores the active zip in the `app-package` container created by
 
 ### Configure GitHub Actions
 
-The infrastructure deployment creates a user-assigned identity whose federated credential trusts only this repository's `master` branch. The identity receives resource-group Contributor and Role Based Access Control Administrator roles for infrastructure deployment, plus Website Contributor on the Function App. Configure these GitHub Actions secrets after deploying the infrastructure:
+The infrastructure deployment creates a user-assigned identity whose federated credential trusts only this repository's `master` branch. The identity receives the resource-group Owner role for infrastructure deployment, including management lock and role assignment changes. Configure these GitHub Actions secrets after deploying the infrastructure:
 
 | Secret | Value |
 | --- | --- |

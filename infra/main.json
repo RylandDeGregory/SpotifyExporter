@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "5286708032226968329"
+      "templateHash": "9823736055315624836"
     }
   },
   "parameters": {
@@ -521,7 +521,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "8564756284269804960"
+              "templateHash": "17946542292281316643"
             }
           },
           "parameters": {
@@ -552,8 +552,7 @@
           },
           "variables": {
             "githubSubject": "[format('repo:{0}/{1}:ref:refs/heads/{2}', parameters('githubOwner'), parameters('githubRepository'), parameters('githubBranch'))]",
-            "contributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
-            "rbacAdministratorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'f58310d9-a9f6-439a-9e8d-f62e7b41a168')]"
+            "ownerRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8e3af657-a8ff-443c-a75c-2fe8c4bcb635')]"
           },
           "resources": [
             {
@@ -580,22 +579,9 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), resourceGroup().id, variables('contributorRoleId'))]",
+              "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), resourceGroup().id, variables('ownerRoleId'))]",
               "properties": {
-                "roleDefinitionId": "[variables('contributorRoleId')]",
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), '2024-11-30').principalId]",
-                "principalType": "ServicePrincipal"
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), resourceGroup().id, variables('rbacAdministratorRoleId'))]",
-              "properties": {
-                "roleDefinitionId": "[variables('rbacAdministratorRoleId')]",
+                "roleDefinitionId": "[variables('ownerRoleId')]",
                 "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'mi-github-spotifyexport'), '2024-11-30').principalId]",
                 "principalType": "ServicePrincipal"
               },
