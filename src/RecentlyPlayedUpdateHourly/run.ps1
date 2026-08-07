@@ -2,7 +2,7 @@
     .SYNOPSIS
         Export Spotify user playback history
     .DESCRIPTION
-        Export Spotify user playback history to Cosmos DB using the Spotify Web API.
+        Export Spotify user playback history to one or both .csv file on Azure Blob Storage and CosmosDB NoSQL collection using the Spotify web API with OAuth2 Client Authorization flow
     .NOTES
         - Assumes that a Spotify application has been configured and an OAuth2 Refresh token has been granted for a user containing the 'user-read-recently-played' scope
           https://developer.spotify.com/documentation/general/guides/authorization-guide/
@@ -58,5 +58,13 @@ $TrackArray = foreach ($Track in $RecentlyPlayed.items) {
 if ($env:COSMOS_ENABLED -eq 'True') {
     Write-Information 'Export collection of objects to CosmosDB'
     Push-OutputBinding -Name OutputDocument -Value $TrackArray
+}
+
+if ($env:STORAGE_ENABLED -eq 'True') {
+    Write-Information 'Convert output collection of objects to CSV'
+    $Csv = $TrackArray | ConvertTo-Csv -NoTypeInformation
+
+    Write-Information 'Upload CSV to Azure Storage'
+    Push-OutputBinding -Name OutputBlob -Value ($Csv -join "`n")
 }
 #endregion Output
