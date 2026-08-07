@@ -1,0 +1,61 @@
+{
+  "bindings": [
+    {
+      "name": "Timer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "0 0 0 * * Sun"
+    },
+    {
+      "name": "FollowingBlob",
+      "type": "blob",
+      "path": "spotify/Following/{DateTime}.csv",
+      "connection": "AzureWebJobsStorage",
+      "direction": "out"
+    },
+    {
+      "type": "cosmosDB",
+      "direction": "out",
+      "name": "FollowingDocuments",
+      "databaseName": "cosmos-spotifyexport",
+      "containerName": "Following",
+      "createIfNotExists": false,
+      "connection": "COSMOS_CONNECTION_STRING",
+      "partitionKey": "id"
+    },
+    {
+      "name": "LibraryBlob",
+      "type": "blob",
+      "path": "spotify/Library/{DateTime}.csv",
+      "connection": "AzureWebJobsStorage",
+      "direction": "out"
+    },
+    {
+      "type": "cosmosDB",
+      "direction": "out",
+      "name": "LibraryDocuments",
+      "databaseName": "cosmos-spotifyexport",
+      "containerName": "Library",
+      "createIfNotExists": false,
+      "connection": "COSMOS_CONNECTION_STRING",
+      "partitionKey": "id"
+    },
+    {
+      "name": "PlaylistBlob",
+      "type": "blob",
+      "path": "spotify/Playlist/{DateTime}.csv",
+      "connection": "AzureWebJobsStorage",
+      "direction": "out"
+    },
+    {
+      "type": "cosmosDB",
+      "direction": "out",
+      "name": "PlaylistDocuments",
+      "databaseName": "cosmos-spotifyexport",
+      "containerName": "Playlist",
+      "createIfNotExists": false,
+      "connection": "COSMOS_CONNECTION_STRING",
+      "partitionKey": "id"
+    }
+  ]
+}
