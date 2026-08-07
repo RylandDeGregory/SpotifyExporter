@@ -7,6 +7,13 @@
       "schedule": "0 0 * * * *"
     },
     {
+      "name": "OutputBlob",
+      "type": "blob",
+      "path": "spotify/RecentlyPlayed/{DateTime}.csv",
+      "connection": "AzureWebJobsStorage",
+      "direction": "out"
+    },
+    {
       "type": "cosmosDB",
       "direction": "out",
       "name": "outputDocument",
