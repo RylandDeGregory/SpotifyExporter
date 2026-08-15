@@ -32,7 +32,7 @@ $Results = 'Following', 'Library', 'Playlist' | ForEach-Object -Parallel {
                 $Followed = while ($Response.artists.next) {
                     $Response = Invoke-RestMethod -Method Get -Headers $ApiHeaders -Uri $Response.artists.next
                     $Response.artists.items
-                    Write-Verbose "Processed [$($Response.artists.items.count)/$($Response.artists.total)] followed artists"
+                    Write-Information "Processed [$($Response.artists.items.count)/$($Response.artists.total)] followed artists"
                 }
 
                 foreach ($Artist in $Followed) {
@@ -55,7 +55,7 @@ $Results = 'Following', 'Library', 'Playlist' | ForEach-Object -Parallel {
                         $Response = Invoke-RestMethod -Method Get -Headers $ApiHeaders -Uri $Response.next
                         $Response.items
                         $Count += $Response.items.count
-                        Write-Verbose "Processed [$Count/$($Response.total)] saved tracks"
+                        Write-Information "Processed [$Count/$($Response.total)] saved tracks"
                         if ($Count % 1000 -eq 0) {
                             Write-Information "Processed [$Count] tracks. Sleep 10 seconds to avoid rate limiting."
                             Start-Sleep -Seconds 10
@@ -106,6 +106,7 @@ $Results = 'Following', 'Library', 'Playlist' | ForEach-Object -Parallel {
                     $Playlist = $_
                     $PlaylistApiHeaders = $using:ApiHeaders
 
+                    Write-Information "Process playlist [$($Playlist.name)] with [$($Playlist.tracks.total)] tracks"
                     try {
                         $Response = @{
                             next = "${env:SPOTIFY_API_URL}/playlists/$($Playlist.id)/tracks"
